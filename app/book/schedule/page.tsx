@@ -202,9 +202,17 @@ export default function SchedulePage() {
                 {formatDateID(selectedDate)}
               </span>
             </div>
-            <div className="mt-1 text-[12.5px] text-graphite">
-              Service Duration: {formatDuration(totalDuration)} ·{" "}
-              {slotsNeeded} × 30 min
+            <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-line p-3 text-[12.5px] text-graphite">
+              {services.map((svc) => (
+                <div key={svc.id} className="flex items-center justify-between">
+                  <span>{svc.title}</span>
+                  <span>{formatDuration(svc.durationMinutes)}</span>
+                </div>
+              ))}
+              <div className="mt-1 flex items-center justify-between border-t border-line pt-2 font-bold text-ink">
+                <span>Total Duration</span>
+                <span>{formatDuration(totalDuration)}</span>
+              </div>
             </div>
 
             <div className="mt-3 grid grid-cols-3 gap-2.5">
@@ -240,12 +248,16 @@ export default function SchedulePage() {
             </div>
 
             {reservationEnd ? (
-              <p className="mt-3 text-[12px] font-medium text-graphite">
-                Reserved: {selectedTime} – {reservationEnd} ·{" "}
-                {formatDuration(totalDuration)}
-              </p>
+              <div className="mt-4 rounded-xl border border-line bg-paper p-3 text-graphite">
+                <p className="text-[12.5px] leading-relaxed">
+                  Your session starts at <strong className="text-ink">{selectedTime}</strong> and will finish exactly at <strong className="text-ink">{reservationEnd}</strong>.
+                </p>
+                <p className="mt-1 text-[11px] italic">
+                  *The highlighted blocks represent the {formatDuration(totalDuration)} needed for your services.
+                </p>
+              </div>
             ) : (
-              <p className="mt-3 text-[11.5px] text-graphite">
+              <p className="mt-4 text-[11.5px] text-graphite">
                 Tap a start time — the full block of{" "}
                 {formatDuration(totalDuration)} will be highlighted.
               </p>

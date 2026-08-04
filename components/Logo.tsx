@@ -28,7 +28,7 @@ export default function Logo({
               light ? "text-paper" : "text-ink",
             )}
           >
-            Hairnerds
+            Techné a
           </div>
           <div
             className={cn(
@@ -36,7 +36,7 @@ export default function Logo({
               light ? "text-paper/80" : "text-graphite",
             )}
           >
-            Studio
+            Barbershop
           </div>
         </div>
       ) : null}

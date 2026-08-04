@@ -1,8 +1,8 @@
 import type { Artist, PaymentMethod, ServiceCategory } from "@/lib/types";
 
 export const STORE = {
-  name: "Hairnerds Studio",
-  location: "Jl. Sudirman No. 88, Jakarta Selatan",
+  name: "Techné a Barbershop",
+  location: "Jl. Palakali No.69, Kukusan, Kecamatan Beji, Kota Depok, Jawa Barat",
 };
 
 export const CATEGORIES: ServiceCategory[] = [
@@ -54,20 +54,6 @@ export const CATEGORIES: ServiceCategory[] = [
           { icon: "razor", label: "Beard Trim" },
           { icon: "razor", label: "Hot Towel Shave" },
           { icon: "sparkle", label: "Finish" },
-        ],
-      },
-      {
-        id: "wash-style",
-        categoryId: "haircut-treatment",
-        title: "Hair Wash & Styling",
-        durationMinutes: 30,
-        price: 25000,
-        description:
-          "A refreshing wash with scalp massage, followed by a blow dry and styling with premium products. The perfect refresh before an event.",
-        includes: [
-          { icon: "droplet", label: "Hair Wash" },
-          { icon: "wind", label: "Blow Dry" },
-          { icon: "sparkle", label: "Styling" },
         ],
       },
     ],

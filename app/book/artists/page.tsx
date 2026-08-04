@@ -115,12 +115,11 @@ export default function ArtistSelectionPage() {
           artists.map((artist) => {
             const isSelected = selectedId === artist.id;
             return (
-              <button
+              <div
                 key={artist.id}
-                type="button"
                 onClick={() => selectArtist(artist.id)}
                 className={cn(
-                  "relative overflow-hidden rounded-3xl border text-left transition active:scale-[0.99]",
+                  "relative overflow-hidden rounded-3xl border text-left cursor-pointer transition active:scale-[0.99]",
                   isSelected
                     ? "border-ink ring-2 ring-ink ring-offset-2"
                     : "border-line",
@@ -174,7 +173,7 @@ export default function ArtistSelectionPage() {
                     View Profile
                   </button>
                 </div>
-              </button>
+              </div>
             );
           })
         )}

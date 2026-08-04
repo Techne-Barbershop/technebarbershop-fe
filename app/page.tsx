@@ -35,12 +35,12 @@ export default function LandingPage() {
         <div className="mx-auto w-full max-w-md px-5 pb-6">
           <p className="text-sm font-normal text-paper/90">Welcome to</p>
           <h1 className="mt-1.5 text-[44px] leading-[0.95] font-black tracking-tight text-paper uppercase">
-            Hairnerds
+            Techné a
             <br />
-            Studio
+            Barbershop
           </h1>
           <p className="mt-3 max-w-[260px] text-[13px] leading-relaxed text-paper/80">
-            Your journey to self-discovery starts here.
+            Crafted Cuts, Modern Style — Where Precision Meets Personality.
           </p>
           <button
             type="button"

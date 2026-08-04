@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HAIRNERDS STUDIO | Barbershop Booking",
+  title: "Techné a Barbershop | Barbershop Booking",
   description:
-    "Book your barber in minutes. Haircuts, perms, color and more at Hairnerds Studio.",
+    "Book your barber in minutes. Haircuts, perms, color and more at Techné a Barbershop.",
 };
 
 export const viewport: Viewport = {
