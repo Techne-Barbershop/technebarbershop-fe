@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Icon } from "@/components/icons";
+
 import Logo from "@/components/Logo";
 
 export default function Header() {

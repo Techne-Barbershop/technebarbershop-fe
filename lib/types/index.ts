@@ -62,3 +62,16 @@ export interface BookingState {
   user: UserDetails | null;
   paymentMethod: PaymentMethod | null;
 }
+
+export type ReservationStatus = "Booked" | "Completed" | "Canceled";
+
+export interface Reservation {
+  id: string;
+  customerName: string;
+  date: string;
+  time: string;
+  workerId: string;
+  workerName: string;
+  serviceName: string;
+  status: ReservationStatus;
+}

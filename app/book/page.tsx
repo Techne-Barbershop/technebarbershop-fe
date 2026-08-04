@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import CheckoutCart from "@/components/CheckoutCart";
-import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
+import { SecondaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import ImagePlaceholder from "@/components/ImagePlaceholder";
 import { useBooking } from "@/context/BookingContext";
-import { CATEGORIES } from "@/lib/data";
-import { formatDuration, formatPrice } from "@/lib/format";
-import { cn } from "@/lib/cn";
+import { CATEGORIES } from "@/lib/constants";
+import { formatDuration, formatPrice } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 import type { Service, ServiceCategory } from "@/lib/types";
 
 export default function ServiceSelectionPage() {
@@ -59,10 +59,7 @@ export default function ServiceSelectionPage() {
     });
   };
 
-  const chooseFromModal = (service: Service) => {
-    toggleService(service);
-    setSelected(null);
-  };
+
 
   const getCategory = (categoryId: string): ServiceCategory | undefined =>
     CATEGORIES.find((category) => category.id === categoryId);

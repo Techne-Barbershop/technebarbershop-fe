@@ -1,4 +1,4 @@
-import type { Artist, PaymentMethod, ServiceCategory } from "@/lib/types";
+import type { Artist, PaymentMethod, ServiceCategory, Reservation } from "@/lib/types";
 
 export const STORE = {
   name: "Techné a Barbershop",
@@ -290,3 +290,46 @@ export function getArtistById(id: string | null): Artist | undefined {
   if (!id) return undefined;
   return ARTISTS.find((artist) => artist.id === id);
 }
+
+export const MOCK_RESERVATIONS: Reservation[] = [
+  {
+    id: "RES-001",
+    customerName: "Budi Santoso",
+    date: new Date().toISOString().split("T")[0],
+    time: "10:00",
+    workerId: "andre",
+    workerName: "Andre Maulana",
+    serviceName: "Essential Cut",
+    status: "Completed",
+  },
+  {
+    id: "RES-002",
+    customerName: "Andi Saputra",
+    date: new Date().toISOString().split("T")[0],
+    time: "11:00",
+    workerId: "andre",
+    workerName: "Andre Maulana",
+    serviceName: "Full Face Treatment",
+    status: "Booked",
+  },
+  {
+    id: "RES-003",
+    customerName: "Reza Rahadian",
+    date: new Date().toISOString().split("T")[0],
+    time: "14:00",
+    workerId: "andre",
+    workerName: "Andre Maulana",
+    serviceName: "Authentic Frizzle Perm",
+    status: "Booked",
+  },
+  {
+    id: "RES-004",
+    customerName: "Dimas Anggara",
+    date: new Date().toISOString().split("T")[0],
+    time: "16:30",
+    workerId: "andre",
+    workerName: "Andre Maulana",
+    serviceName: "Only Beard Trim and Shave",
+    status: "Canceled",
+  },
+];

@@ -1,9 +1,9 @@
 "use client";
 
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils/cn";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
-import { formatTimer } from "@/lib/format";
+import { formatTimer } from "@/lib/utils/format";
 
 export default function FloatingTimer({ className }: { className?: string }) {
   const { timer } = useBooking();

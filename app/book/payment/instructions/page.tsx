@@ -7,9 +7,9 @@ import BottomBar from "@/components/BottomBar";
 import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
-import { STORE } from "@/lib/data";
-import { formatDateID } from "@/lib/availability";
-import { formatDuration, formatPrice, sumDurations, sumPrices } from "@/lib/format";
+import { STORE } from "@/lib/constants";
+import { formatDateID } from "@/lib/utils/availability";
+import { formatDuration, formatPrice, sumDurations, sumPrices } from "@/lib/utils/format";
 import type { BookingState } from "@/lib/types";
 
 type Status = "idle" | "submitting" | "success";

@@ -6,8 +6,8 @@ import {
   formatDurationShort,
   formatPrice,
   sumDurations,
-} from "@/lib/format";
-import { cn } from "@/lib/cn";
+} from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 import type { Service } from "@/lib/types";
 
 export default function CheckoutCart({

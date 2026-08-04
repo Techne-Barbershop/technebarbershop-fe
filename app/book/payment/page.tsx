@@ -7,9 +7,9 @@ import BottomBar from "@/components/BottomBar";
 import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
-import { PAYMENT_METHODS } from "@/lib/data";
-import { formatPrice, sumPrices } from "@/lib/format";
-import { cn } from "@/lib/cn";
+import { PAYMENT_METHODS } from "@/lib/constants";
+import { formatPrice, sumPrices } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 import type { PaymentMethodId } from "@/lib/types";
 
 export default function PaymentMethodPage() {

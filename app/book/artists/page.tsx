@@ -8,9 +8,9 @@ import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import ImagePlaceholder from "@/components/ImagePlaceholder";
 import { useBooking } from "@/context/BookingContext";
-import { ARTISTS } from "@/lib/data";
-import { formatPrice } from "@/lib/format";
-import { cn } from "@/lib/cn";
+import { ARTISTS } from "@/lib/constants";
+import { formatPrice } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 
 type SortMode = "default" | "az" | "rating";
 

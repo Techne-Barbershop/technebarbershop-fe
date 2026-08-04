@@ -33,7 +33,8 @@ export type IconName =
   | "flame"
   | "building"
   | "qrcode"
-  | "wallet";
+  | "wallet"
+  | "calendar";
 
 const ICONS: Record<IconName, ReactNode> = {
   scissors: (
@@ -216,6 +217,14 @@ const ICONS: Record<IconName, ReactNode> = {
       <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
       <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
       <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
     </>
   ),
 };

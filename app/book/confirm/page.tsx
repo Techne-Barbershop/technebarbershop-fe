@@ -8,15 +8,15 @@ import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import ImagePlaceholder from "@/components/ImagePlaceholder";
 import { useBooking } from "@/context/BookingContext";
-import { STORE } from "@/lib/data";
-import { formatDateID } from "@/lib/availability";
+import { STORE } from "@/lib/constants";
+import { formatDateID } from "@/lib/utils/availability";
 import {
   addMinutes,
   formatDuration,
   formatPrice,
   sumDurations,
   sumPrices,
-} from "@/lib/format";
+} from "@/lib/utils/format";
 
 export default function BookingConfirmationPage() {
   const router = useRouter();

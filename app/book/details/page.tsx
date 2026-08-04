@@ -6,7 +6,7 @@ import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
 import { PrimaryButton } from "@/components/Buttons";
 import { useBooking } from "@/context/BookingContext";
-import { cn } from "@/lib/cn";
+import { cn } from "@/lib/utils/cn";
 
 interface FormValues {
   name: string;

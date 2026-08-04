@@ -16,13 +16,13 @@ import {
   todayISO,
   WEEKDAYS,
   MONTHS_LONG,
-} from "@/lib/availability";
+} from "@/lib/utils/availability";
 import {
   addMinutes,
   formatDuration,
   sumDurations,
-} from "@/lib/format";
-import { cn } from "@/lib/cn";
+} from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 
 export default function SchedulePage() {
   const router = useRouter();
