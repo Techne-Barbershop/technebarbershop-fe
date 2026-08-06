@@ -65,7 +65,7 @@ export default function SchedulePage() {
   }
 
   const totalDuration = sumDurations(services);
-  const slotsNeeded = Math.max(1, Math.ceil(totalDuration / 30));
+  const slotsNeeded = Math.max(1, Math.ceil(totalDuration / 15));
 
   const changeMonth = (delta: number) => {
     const next = new Date(year, month + delta, 1);

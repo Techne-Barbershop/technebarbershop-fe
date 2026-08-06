@@ -68,10 +68,13 @@ export type ReservationStatus = "Booked" | "Completed" | "Canceled";
 export interface Reservation {
   id: string;
   customerName: string;
+  customerPhone: string;
+  customerEmail: string;
   date: string;
   time: string;
+  durationMinutes: number;
   workerId: string;
   workerName: string;
-  serviceName: string;
+  serviceName: string[];
   status: ReservationStatus;
 }

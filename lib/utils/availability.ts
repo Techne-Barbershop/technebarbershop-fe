@@ -34,7 +34,9 @@ const SLOTS: string[] = [];
 for (let hour = 10; hour <= 21; hour += 1) {
   const hh = String(hour).padStart(2, "0");
   SLOTS.push(`${hh}:00`);
+  SLOTS.push(`${hh}:15`);
   SLOTS.push(`${hh}:30`);
+  SLOTS.push(`${hh}:45`);
 }
 
 export { WEEKDAYS, MONTHS_SHORT, MONTHS_LONG };
