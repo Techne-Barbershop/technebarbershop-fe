@@ -47,7 +47,7 @@ export default function AdminSidebar({
           </div>
           <div className="leading-none">
             <div className="text-sm font-extrabold tracking-wide text-black uppercase">
-              Hairnerds
+              Techné a Barbershop
             </div>
             <div className="mt-1 text-[10px] tracking-[0.3em] text-gray-400 uppercase">
               Admin Panel

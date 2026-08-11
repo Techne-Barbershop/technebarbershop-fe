@@ -87,9 +87,6 @@ export default function PenjualanPage() {
         {/* TAB 1: Detail Penjualan */}
         {activeTab === "Detail Penjualan" && (
           <div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
-              <h2 className="text-base font-bold text-black">Detail Penjualan</h2>
-            </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[600px] text-sm">
                 <thead>
@@ -140,9 +137,6 @@ export default function PenjualanPage() {
         {/* TAB 2: Transaksi */}
         {activeTab === "Transaksi" && (
           <div>
-             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
-              <h2 className="text-base font-bold text-black">Transaksi</h2>
-            </div>
             <div className="overflow-x-auto pb-4">
               <table className="w-full min-w-[1200px] text-sm">
                 <thead>
@@ -202,9 +196,6 @@ export default function PenjualanPage() {
         {/* TAB 3: Detail Transaksi */}
         {activeTab === "Detail Transaksi" && (
           <div>
-             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
-              <h2 className="text-base font-bold text-black">Detail Transaksi per Service</h2>
-            </div>
             <div className="overflow-x-auto pb-4">
               <table className="w-full min-w-[1200px] text-sm">
                 <thead>
