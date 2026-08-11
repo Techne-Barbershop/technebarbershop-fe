@@ -95,7 +95,7 @@ export default function InventoriPage() {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold uppercase text-gray-500">
                 <th className="px-5 py-3 whitespace-nowrap">ID Produk</th>
-                <th className="px-5 py-3 whitespace-nowrap">Gambar</th>
+                <th className="px-5 py-3 whitespace-nowrap"></th>
                 <th className="px-5 py-3 whitespace-nowrap">Nama Produk</th>
                 <th className="px-5 py-3 text-right whitespace-nowrap">Harga</th>
                 <th className="px-5 py-3 text-right whitespace-nowrap">Kuantitas</th>
