@@ -3,7 +3,6 @@
 import { useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
-import AdminFab from "@/components/admin/AdminFab";
 
 export default function AdminLayout({
   children,
@@ -22,7 +21,6 @@ export default function AdminLayout({
         <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
         <main className="p-4 md:p-6 lg:p-8">{children}</main>
       </div>
-      <AdminFab />
     </div>
   );
 }

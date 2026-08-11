@@ -52,7 +52,8 @@ export type IconName =
   | "arrowLeft"
   | "arrowRight"
   | "info"
-  | "dollar";
+  | "dollar"
+  | "moreVertical";
 
 const ICONS: Record<IconName, ReactNode> = {
   scissors: (
@@ -365,6 +366,13 @@ const ICONS: Record<IconName, ReactNode> = {
     <>
       <path d="M12 1v22" />
       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </>
+  ),
+  moreVertical: (
+    <>
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="19" r="1" />
     </>
   ),
 };
