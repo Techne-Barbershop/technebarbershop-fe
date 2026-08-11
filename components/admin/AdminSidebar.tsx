@@ -12,7 +12,7 @@ const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/pelanggan", label: "Pelanggan", icon: "users" },
   { href: "/admin/staf", label: "Staf", icon: "user" },
   { href: "/admin/layanan", label: "Layanan", icon: "scissors" },
-  { href: "/admin/inventori", label: "Inventori", icon: "grid" },
+  { href: "/admin/inventori", label: "Inventori", icon: "box" },
 ];
 
 export default function AdminSidebar({
