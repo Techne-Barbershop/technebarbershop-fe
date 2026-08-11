@@ -25,8 +25,8 @@ export default function PenjualanPage() {
   const [activeTab, setActiveTab] = useState<TabType>("Detail Penjualan");
   const [dateFilter, setDateFilter] = useState("Hari Ini");
   
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
-  const [selectedLineItem, setSelectedLineItem] = useState<any>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<(typeof ADMIN_TRANSACTIONS)[number] | null>(null);
+  const [selectedLineItem, setSelectedLineItem] = useState<(typeof ADMIN_TRANSACTIONS_LINE_ITEMS)[number] | null>(null);
 
   const totalPenjualanDetail = ADMIN_SALES_DETAILS.reduce((acc, curr) => acc + curr.totalSales, 0);
   const totalPendapatanDetail = ADMIN_SALES_DETAILS.reduce((acc, curr) => acc + curr.grossRevenue, 0);
@@ -43,7 +43,7 @@ export default function PenjualanPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">{stat.label}</span>
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
-                <Icon name={stat.icon as any} className="h-4.5 w-4.5" />
+                <Icon name={stat.icon} className="h-4.5 w-4.5" />
               </div>
             </div>
             <div className="mt-3 text-2xl font-bold text-black">

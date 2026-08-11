@@ -34,18 +34,7 @@ export default function AdminHeader({
           <Icon name="menu" className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-bold text-black">{title}</h1>
-        <div className="ml-auto hidden items-center gap-3 md:flex">
-          <div className="relative">
-            <Icon
-              name="search"
-              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="search"
-              placeholder="Cari..."
-              className="h-9 w-56 rounded-lg border border-transparent bg-gray-100 pr-3 pl-9 text-sm text-black outline-none placeholder:text-gray-400 focus:border-black focus:bg-white focus:ring-1 focus:ring-black"
-            />
-          </div>
+        <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
             aria-label="Notifications"

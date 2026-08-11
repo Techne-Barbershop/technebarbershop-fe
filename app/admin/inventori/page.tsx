@@ -14,12 +14,14 @@ const INVENTORY_STATS = [
   { label: "Produk Baru Bulan Ini", value: "12", icon: "plus" },
 ] as const;
 
+type InventoryItem = (typeof ADMIN_INVENTORY)[number];
+
 export default function InventoriPage() {
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<InventoryItem | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLTableElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -33,13 +35,13 @@ export default function InventoriPage() {
     };
   }, []);
 
-  const openDetail = (product: any) => {
+  const openDetail = (product: InventoryItem) => {
     setSelectedProduct(product);
     setIsEditMode(false);
     setOpenDropdownId(null);
   };
 
-  const openEdit = (product: any) => {
+  const openEdit = (product: InventoryItem) => {
     setSelectedProduct(product);
     setIsEditMode(true);
     setOpenDropdownId(null);
@@ -67,7 +69,7 @@ export default function InventoriPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">{stat.label}</span>
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
-                <Icon name={stat.icon as any} className="h-4.5 w-4.5" />
+                <Icon name={stat.icon} className="h-4.5 w-4.5" />
               </div>
             </div>
             <div className="mt-3 text-2xl font-bold text-black">

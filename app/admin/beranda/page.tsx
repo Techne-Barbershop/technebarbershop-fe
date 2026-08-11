@@ -122,7 +122,7 @@ export default function BerandaPage() {
                     {transaction.customer}
                   </td>
                   <td className="px-5 py-3 text-gray-600">
-                    {transaction.service}
+                    {transaction.services.join(", ")}
                   </td>
                   <td className="px-5 py-3 text-gray-600">
                     {transaction.date}

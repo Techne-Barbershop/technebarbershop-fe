@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ADMIN_STAFF, ADMIN_RESERVATIONS } from "@/lib/admin-data";
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
@@ -21,7 +21,7 @@ export default function KalenderPage() {
   // By default select the first worker or 'all' if we wanted to support all
   const [selectedWorkerId, setSelectedWorkerId] = useState<string>(ADMIN_STAFF[0].id);
   
-  const [selectedRes, setSelectedRes] = useState<any>(null);
+  const [selectedRes, setSelectedRes] = useState<(typeof ADMIN_RESERVATIONS)[number] | null>(null);
 
   // WEEK LOGIC
   const startOfWeek = useMemo(() => {
