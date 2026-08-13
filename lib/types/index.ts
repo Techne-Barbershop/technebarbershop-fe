@@ -65,6 +65,8 @@ export interface BookingState {
 
 export type ReservationStatus = "Booked" | "Completed" | "Canceled";
 
+export type PaymentStatus = "Not Paid" | "Paid";
+
 export interface Reservation {
   id: string;
   customerName: string;
@@ -77,4 +79,5 @@ export interface Reservation {
   workerName: string;
   serviceName: string[];
   status: ReservationStatus;
+  paymentStatus?: PaymentStatus;
 }
