@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
 import Avatar from "@/components/admin/Avatar";
+import { useAuth } from "@/context/AuthContext";
 
 const TITLES: Record<string, string> = {
   "/admin/beranda": "Beranda",
@@ -12,6 +13,8 @@ const TITLES: Record<string, string> = {
   "/admin/staf": "Staf",
   "/admin/layanan": "Layanan",
   "/admin/layanan/baru": "Layanan Baru",
+  "/admin/inventori": "Inventori",
+  "/admin/inventori/baru": "Tambah Produk",
 };
 
 export default function AdminHeader({
@@ -20,7 +23,14 @@ export default function AdminHeader({
   onMenuClick: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const title = TITLES[pathname] ?? "Admin";
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
@@ -44,12 +54,13 @@ export default function AdminHeader({
           </button>
           <button
             type="button"
-            aria-label="Settings"
+            onClick={handleLogout}
+            aria-label="Logout"
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition active:scale-95 hover:bg-gray-50"
           >
-            <Icon name="settings" className="h-4.5 w-4.5" />
+            <Icon name="logout" className="h-4.5 w-4.5" />
           </button>
-          <Avatar name="Admin Hairnerds" size="sm" />
+          <Avatar name={user?.name ?? "Admin"} size="sm" />
         </div>
       </div>
     </header>

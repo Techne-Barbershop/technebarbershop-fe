@@ -5,22 +5,35 @@ import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
+import { useAuth } from "@/context/AuthContext";
+
+const ROLE_HOMES: Record<string, string> = {
+  ADMIN: "/admin",
+  CASHIER: "/cashier",
+  CAPSTER: "/worker",
+  CUSTOMER: "/book",
+};
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const query = email.toLowerCase();
-    
-    if (query.includes("admin")) {
-      router.push("/admin");
-    } else if (query.includes("worker")) {
-      router.push("/worker");
-    } else {
-      router.push("/book");
+    setError("");
+    setSubmitting(true);
+    try {
+      const user = await login(email, password);
+      const home = ROLE_HOMES[user.role] ?? "/book";
+      router.push(home);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login gagal");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -86,14 +99,16 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <PrimaryButton type="submit" className="w-full mt-2">
-              Sign In
+            <PrimaryButton type="submit" disabled={submitting} className="w-full mt-2">
+              {submitting ? "Signing in..." : "Sign In"}
             </PrimaryButton>
           </form>
 
-          <div className="mt-6 text-center text-[12.5px] text-graphite italic">
-            *Mock Login: Use &quot;admin&quot;, &quot;worker&quot;, or anything else in the email to route accordingly.
-          </div>
+          {error && (
+            <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-[13px] font-medium text-red-600">
+              {error}
+            </div>
+          )}
         </div>
       </div>
     </div>
