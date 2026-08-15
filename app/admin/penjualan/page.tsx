@@ -106,6 +106,7 @@ export default function PenjualanPage() {
                   <th className="px-5 py-3 whitespace-nowrap">ID Transaksi</th>
                   <th className="px-5 py-3 whitespace-nowrap">Customer</th>
                   <th className="px-5 py-3 whitespace-nowrap">Capster</th>
+                  <th className="px-5 py-3 whitespace-nowrap">Layanan</th>
                   <th className="px-5 py-3 whitespace-nowrap">Waktu</th>
                   <th className="px-5 py-3 whitespace-nowrap">Durasi</th>
                   <th className="px-5 py-3 text-right whitespace-nowrap">Pendapatan</th>
@@ -116,14 +117,23 @@ export default function PenjualanPage() {
               <tbody className="divide-y divide-gray-100">
                 {transactions.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-5 py-6 text-sm text-gray-400">Belum ada transaksi.</td>
+                    <td colSpan={9} className="px-5 py-6 text-sm text-gray-400">Belum ada transaksi.</td>
                   </tr>
                 )}
                 {transactions.map((trx) => (
                   <tr key={trx.transaction_id} className="hover:bg-gray-50/50">
                     <td className="px-5 py-3 font-medium text-gray-600 whitespace-nowrap">{trx.transaction_id}</td>
-                    <td className="px-5 py-3 font-semibold text-black whitespace-nowrap">{trx.customer_id}</td>
-                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{trx.capster_id}</td>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-black">{trx.customer_name}</span>
+                        <span className="text-xs text-gray-400">{trx.customer_phone}</span>
+                        <span className="text-xs text-gray-400">{trx.customer_email}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{trx.capster_name}</td>
+                    <td className="px-5 py-3 text-gray-600 max-w-[240px]">
+                      <span className="truncate">{trx.details.map((d) => d.service_name).join(", ") || "-"}</span>
+                    </td>
                     <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span>{trx.booking_date}</span>
@@ -162,11 +172,18 @@ export default function PenjualanPage() {
             </div>
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <span className="text-xs font-bold uppercase text-gray-500">Customer</span>
-              <span className="font-semibold text-black">{selectedTransaction.customer_id}</span>
+              <div className="text-right">
+                <div className="font-semibold text-black">{selectedTransaction.customer_name}</div>
+                <div className="text-xs text-gray-400">{selectedTransaction.customer_phone} • {selectedTransaction.customer_email}</div>
+                <div className="text-[10px] text-gray-300">ID: {selectedTransaction.customer_id}</div>
+              </div>
             </div>
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <span className="text-xs font-bold uppercase text-gray-500">Capster</span>
-              <span className="font-semibold text-black">{selectedTransaction.capster_id}</span>
+              <div className="text-right">
+                <div className="font-semibold text-black">{selectedTransaction.capster_name}</div>
+                <div className="text-[10px] text-gray-300">ID: {selectedTransaction.capster_id}</div>
+              </div>
             </div>
             <div className="flex flex-col gap-1 border-b border-gray-100 pb-3">
               <span className="text-xs font-bold uppercase text-gray-500">Detail Layanan</span>
@@ -174,7 +191,7 @@ export default function PenjualanPage() {
                 <div className="flex flex-col gap-1">
                   {detail.details.map((item) => (
                     <span key={item.service_id} className="font-semibold text-black">
-                      - {item.service_id} ({formatRupiah(item.price_at_booking)})
+                      - {item.service_name} ({formatRupiah(item.price_at_booking)})
                     </span>
                   ))}
                 </div>

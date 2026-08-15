@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Avatar from "@/components/admin/Avatar";
 import { Icon } from "@/components/icons";
+import { api } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { Staff, StaffResponse, StaffSchedule } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
@@ -15,8 +16,11 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Admin",
 };
 
+function hasAnySchedule(member: Staff): boolean {
+  return member.schedules.length > 0;
+}
+
 export default function StafPage() {
-  const [view, setView] = useState<"week" | "month">("week");
   const [editing, setEditing] = useState<{ staff: Staff; day: number; schedule?: StaffSchedule } | null>(null);
   const [form, setForm] = useState({ start_time: "", end_time: "" });
   const [formError, setFormError] = useState("");
@@ -48,13 +52,9 @@ export default function StafPage() {
     }
     setSaving(true);
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/staff/${editing.staff.user_id}/schedule`, {
+      await api(`/api/admin/staff/${editing.staff.user_id}/schedule`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("techne_token")}`,
-        },
-        body: JSON.stringify({ day_of_week: editing.day, start_time: form.start_time, end_time: form.end_time }),
+        body: { day_of_week: editing.day, start_time: form.start_time, end_time: form.end_time },
       });
       setEditing(null);
       refetch();
@@ -66,92 +66,83 @@ export default function StafPage() {
   };
 
   return (
-    <div>
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
-          <div className="flex overflow-hidden rounded-lg border border-gray-300">
-            <button
-              type="button"
-              onClick={() => setView("week")}
-              className={cn(
-                "px-4 py-2 text-xs font-semibold transition-colors",
-                view === "week" ? "bg-black text-white" : "bg-white text-black hover:bg-gray-50",
-              )}
-            >
-              Minggu
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("month")}
-              className={cn(
-                "px-4 py-2 text-xs font-semibold transition-colors",
-                view === "month" ? "bg-black text-white" : "bg-white text-black hover:bg-gray-50",
-              )}
-            >
-              Bulan
-            </button>
-          </div>
-          <p className="text-xs text-gray-400">Klik sel pada jadwal untuk mengedit jam kerja.</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{staff.length} staf terdaftar</p>
+        <p className="text-xs text-gray-400">Klik sel jadwal untuk mengedit jam kerja.</p>
+      </div>
 
-        {loading && <p className="px-5 py-6 text-sm text-gray-400">Memuat data...</p>}
-        {error && <p className="px-5 py-6 text-sm text-red-500">{error}</p>}
-        {!loading && !error && (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left">
-                  <th className="w-44 px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Staf</th>
-                  {DAYS.map((day) => (
-                    <th key={day} className="border-l border-gray-100 px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase">
-                      {day}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {staff.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-5 py-6 text-sm text-gray-400">Belum ada staf terdaftar.</td>
-                  </tr>
+      {loading && <p className="rounded-lg border border-gray-200 bg-white px-5 py-6 text-sm text-gray-400">Memuat data...</p>}
+      {error && <p className="rounded-lg border border-gray-200 bg-white px-5 py-6 text-sm text-red-500">{error}</p>}
+      {!loading && !error && staff.length === 0 && (
+        <p className="rounded-lg border border-gray-200 bg-white px-5 py-6 text-sm text-gray-400">Belum ada staf terdaftar.</p>
+      )}
+
+      <div className="flex flex-col gap-6">
+        {staff.map((member) => (
+          <div key={member.user_id} className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-4">
+                <Avatar name={member.name} size="lg" />
+                <div>
+                  <div className="text-base font-bold text-black">{member.name}</div>
+                  <span className="mt-1 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                    {ROLE_LABELS[member.role] ?? member.role}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:ml-auto sm:grid-cols-3 sm:text-right">
+                <div className="flex items-center gap-2 sm:justify-end">
+                  <Icon name="mail" className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="text-sm text-gray-600">{member.email || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 sm:justify-end">
+                  <Icon name="phone" className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="text-sm text-gray-600">{member.phone || "-"}</span>
+                </div>
+                <div className="flex items-center gap-2 sm:justify-end">
+                  <Icon name="tag" className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="text-sm text-gray-600">{member.user_id}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Jadwal Mingguan</h3>
+                {!hasAnySchedule(member) && (
+                  <span className="text-xs text-gray-400">Belum ada jadwal</span>
                 )}
-                {staff.map((member) => (
-                  <tr key={member.user_id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={member.name} size="sm" />
-                        <div>
-                          <div className="font-semibold text-black">{member.name}</div>
-                          <div className="text-xs text-gray-500">{ROLE_LABELS[member.role] ?? member.role}</div>
-                        </div>
-                      </div>
-                    </td>
-                    {DAYS.map((day, index) => {
-                      const schedule = scheduleFor(member, index);
-                      return (
-                        <td key={day} className="border-l border-gray-100 px-3 py-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => openEditor(member, index)}
-                            className="rounded px-2 py-1 transition hover:bg-gray-100"
-                          >
-                            {schedule ? (
-                              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
-                                {schedule.start_time} - {schedule.end_time}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-300">-</span>
-                            )}
-                          </button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                {DAYS.map((day, index) => {
+                  const schedule = scheduleFor(member, index);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => openEditor(member, index)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 rounded-lg border px-2 py-3 text-center transition hover:bg-gray-50",
+                        schedule ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50",
+                      )}
+                    >
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">{day}</span>
+                      {schedule ? (
+                        <span className="text-xs font-semibold text-black whitespace-nowrap">
+                          {schedule.start_time} - {schedule.end_time}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">-</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
       {editing && (

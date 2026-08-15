@@ -105,13 +105,18 @@ export interface ReservationsResponse {
 export interface TransactionDetail {
   transaction_id: string;
   service_id: string;
+  service_name: string;
   price_at_booking: string;
 }
 
 export interface Transaction {
   transaction_id: string;
   customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
   capster_id: string;
+  capster_name: string;
   booking_date: string;
   start_time: string;
   total_duration_minutes: number;
@@ -193,4 +198,27 @@ export interface PaymentAnalyticsItem {
 export interface PaymentAnalyticsResponse {
   summary: PaymentSummary;
   payments: PaymentAnalyticsItem[];
+}
+
+export type WorkerReservationStatus = "BOOKED" | "COMPLETED" | "CANCELLED";
+
+export interface WorkerReservation {
+  reservation_id: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  service_id: string;
+  service_name: string;
+  service_price: string;
+  capster_id: string;
+  booking_date: string;
+  start_time: string;
+  duration_minutes: number;
+  status: WorkerReservationStatus;
+  notes: string;
+}
+
+export interface WorkerReservationsResponse {
+  reservations: WorkerReservation[];
 }
