@@ -16,12 +16,12 @@ export default function AdminLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "ADMIN")) {
+    if (!loading && (!user || user.role?.toUpperCase() !== "ADMIN")) {
       router.replace("/login");
     }
   }, [loading, user, router]);
 
-  if (loading || !user || user.role !== "ADMIN") {
+  if (loading || !user || user.role?.toUpperCase() !== "ADMIN") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <p className="text-sm text-gray-400">Memuat...</p>

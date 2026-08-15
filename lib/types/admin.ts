@@ -37,12 +37,29 @@ export interface StaffSchedule {
   end_time: string;
 }
 
+export interface StaffLeave {
+  leave_id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  image_url: string;
+  leave_date: string;
+  reason: string;
+}
+
+export interface StaffLeavesResponse {
+  leaves: StaffLeave[];
+}
+
 export interface Staff {
   user_id: string;
   name: string;
   email: string;
   phone: string;
   role: string;
+  image_url: string;
   schedules: StaffSchedule[];
 }
 
