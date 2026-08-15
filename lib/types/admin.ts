@@ -139,3 +139,58 @@ export interface DashboardStats {
   transactions_month: number;
   reservations_today: number;
 }
+
+export interface ItemSalesSummary {
+  jumlah_terjual: string;
+  kotor: string;
+  diskon_item: string;
+  total_diskon_penjualan: string;
+  pengembalian: string;
+  nett: string;
+  pajak: string;
+  total_penjualan: string;
+  penggunaan_voucher: string;
+}
+
+export interface ItemSalesItem {
+  tipe: string;
+  nama: string;
+  sold: number;
+  kotor: string;
+  diskon: string;
+  diskon_penjualan: string;
+  pengembalian: string;
+  nett: string;
+  tax: string;
+  penggunaan_voucher: string;
+  total_penjualan: string;
+}
+
+export interface ItemSalesResponse {
+  summary: ItemSalesSummary;
+  items: ItemSalesItem[];
+}
+
+export interface PaymentSummary {
+  total_transaksi: number;
+  pendapatan_kotor: string;
+  total_pengembalian: string;
+  penggunaan_voucher: string;
+  kembalian: string;
+  total_pembayaran_net: string;
+}
+
+export interface PaymentAnalyticsItem {
+  payment_name: string;
+  total_transaksi: number;
+  gross_payment: string;
+  refunds: string;
+  penggunaan_voucher: string;
+  kembalian: string;
+  net_payment: string;
+}
+
+export interface PaymentAnalyticsResponse {
+  summary: PaymentSummary;
+  payments: PaymentAnalyticsItem[];
+}

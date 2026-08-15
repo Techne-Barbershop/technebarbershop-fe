@@ -15,6 +15,8 @@ const TITLES: Record<string, string> = {
   "/admin/layanan/baru": "Layanan Baru",
   "/admin/inventori": "Inventori",
   "/admin/inventori/baru": "Tambah Produk",
+  "/admin/analytics/item-sales": "Penjualan berdasarkan item",
+  "/admin/analytics/payments": "Ringkasan pembayaran",
 };
 
 export default function AdminHeader({
