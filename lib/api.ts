@@ -67,6 +67,13 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      document.cookie = "role=; path=/; max-age=0";
+      document.cookie = "token=; path=/; max-age=0";
+      window.location.href = "/login";
+    }
+
     const message =
       payload && typeof payload === "object" && "error" in payload
         ? String((payload as { error: string }).error)

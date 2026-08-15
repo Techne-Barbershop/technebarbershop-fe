@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = getToken();
     if (!token) return;
     api<{ data: User }>("/api/me")
-      .then((payload) => setUser(payload.data))
+      .then((payload) => setUser(unwrap(payload)))
       .catch(() => clearToken())
       .finally(() => setLoading(false));
   }, []);
@@ -33,10 +33,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       method: "POST",
       body: { email, password },
     });
+    
+    // Teman Anda membungkus response API di dalam JSON {"data": ...} di file response.go
+    // Jadi kita harus melakukan unwrap
     const loggedUser = unwrap(payload);
+    
     if (loggedUser.token) {
       window.localStorage.setItem("techne_token", loggedUser.token);
+      document.cookie = `role=${loggedUser.role}; path=/; max-age=86400`;
+      document.cookie = `token=${loggedUser.token}; path=/; max-age=86400`;
     }
+    
     setUser(loggedUser);
     return loggedUser;
   }, []);

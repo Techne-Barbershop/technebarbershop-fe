@@ -7,6 +7,7 @@ import Modal from "@/components/admin/Modal";
 import { api } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { Product, ProductsResponse } from "@/lib/types/admin";
+import ImageUpload from "@/components/admin/ImageUpload";
 
 function formatRupiah(value: string): string {
   const num = Number(value);
@@ -17,8 +18,9 @@ function formatRupiah(value: string): string {
 export default function InventoriPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", price: "", current_stock: 0 });
+  const [editForm, setEditForm] = useState({ name: "", price: "", current_stock: 0, image_url: "" });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -40,13 +42,24 @@ export default function InventoriPage() {
   const openDetail = (product: Product) => {
     setSelectedProduct(product);
     setIsEditMode(false);
+    setIsCreateMode(false);
     setOpenDropdownId(null);
+  };
+
+  const openCreate = () => {
+    setSelectedProduct(null);
+    setEditForm({ name: "", price: "", current_stock: 0, image_url: "" });
+    setIsCreateMode(true);
+    setIsEditMode(false);
+    setOpenDropdownId(null);
+    setFormError("");
   };
 
   const openEdit = (product: Product) => {
     setSelectedProduct(product);
-    setEditForm({ name: product.name, price: product.price, current_stock: product.current_stock });
+    setEditForm({ name: product.name, price: product.price, current_stock: product.current_stock, image_url: product.image_url || "" });
     setIsEditMode(true);
+    setIsCreateMode(false);
     setOpenDropdownId(null);
     setFormError("");
   };
@@ -64,19 +77,31 @@ export default function InventoriPage() {
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProduct) return;
+    if (!isCreateMode && !selectedProduct) return;
     setSaving(true);
     try {
-      await api(`/api/admin/products/${selectedProduct.product_id}`, {
-        method: "PUT",
-        body: {
-          name: editForm.name,
-          current_stock: Number(editForm.current_stock),
-          price: editForm.price,
-          image_url: selectedProduct.image_url,
-        },
-      });
-      setSelectedProduct(null);
+      if (isCreateMode) {
+        await api("/api/admin/products", {
+          method: "POST",
+          body: {
+            name: editForm.name,
+            current_stock: Number(editForm.current_stock),
+            price: editForm.price,
+            image_url: editForm.image_url,
+          },
+        });
+      } else {
+        await api(`/api/admin/products/${selectedProduct!.product_id}`, {
+          method: "PUT",
+          body: {
+            name: editForm.name,
+            current_stock: Number(editForm.current_stock),
+            price: editForm.price,
+            image_url: editForm.image_url,
+          },
+        });
+      }
+      closeModal();
       refetch();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Gagal menyimpan produk");
@@ -88,6 +113,7 @@ export default function InventoriPage() {
   const closeModal = () => {
     setSelectedProduct(null);
     setIsEditMode(false);
+    setIsCreateMode(false);
   };
 
   return (
@@ -98,13 +124,13 @@ export default function InventoriPage() {
             <h2 className="text-base font-bold text-black">Daftar Inventori Produk</h2>
             <p className="mt-0.5 text-xs text-gray-400">{products.length} produk</p>
           </div>
-          <Link
-            href="/admin/inventori/baru"
+          <button
+            onClick={openCreate}
             className="flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-xs font-semibold text-white transition hover:bg-gray-800"
           >
             <Icon name="plus" className="h-4 w-4" />
             Tambah Produk
-          </Link>
+          </button>
         </div>
 
         {loading && <p className="px-5 py-6 text-sm text-gray-400">Memuat data...</p>}
@@ -188,26 +214,36 @@ export default function InventoriPage() {
         )}
       </div>
 
-      <Modal isOpen={!!selectedProduct} onClose={closeModal} title={isEditMode ? "Edit Produk" : "Detail Produk"}>
-        {selectedProduct && (
+      <Modal isOpen={!!selectedProduct || isCreateMode} onClose={closeModal} title={isCreateMode ? "Tambah Produk" : (isEditMode ? "Edit Produk" : "Detail Produk")}>
+        {(selectedProduct || isCreateMode) && (
           <div className="space-y-4">
-            <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-xl bg-gray-100 border border-gray-200">
-              {selectedProduct.image_url ? (
-                <img src={selectedProduct.image_url} alt={selectedProduct.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-gray-400">
-                  <Icon name="image" className="h-8 w-8" />
-                  <span className="text-xs font-medium">No Image Available</span>
-                </div>
-              )}
-            </div>
+            {!isEditMode && !isCreateMode && (
+              <div className="flex h-48 w-48 mx-auto items-center justify-center overflow-hidden rounded-xl bg-gray-100 border border-gray-200">
+                {selectedProduct?.image_url ? (
+                  <img src={selectedProduct.image_url} alt={selectedProduct.name} className="h-full w-full object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <Icon name="image" className="h-8 w-8" />
+                    <span className="text-xs font-medium">No Image Available</span>
+                  </div>
+                )}
+              </div>
+            )}
 
-            {isEditMode ? (
+            {isEditMode || isCreateMode ? (
               <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="edit-id" className="text-sm font-semibold text-black">ID Produk</label>
-                  <input id="edit-id" type="text" value={selectedProduct.product_id} disabled className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 cursor-not-allowed" />
-                </div>
+                <ImageUpload 
+                  value={editForm.image_url} 
+                  onChange={(url) => setEditForm({ ...editForm, image_url: url })} 
+                  aspectRatio={1} 
+                  label="Gambar Produk (Rasio 1:1)"
+                />
+                {!isCreateMode && (
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="edit-id" className="text-sm font-semibold text-black">ID Produk</label>
+                    <input id="edit-id" type="text" value={selectedProduct?.product_id} disabled className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-500 cursor-not-allowed" />
+                  </div>
+                )}
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="edit-name" className="text-sm font-semibold text-black">Nama Produk</label>
                   <input id="edit-name" type="text" required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-black outline-none transition focus:border-black" />
@@ -234,19 +270,19 @@ export default function InventoriPage() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                   <span className="text-xs font-bold uppercase text-gray-500">ID Produk</span>
-                  <span className="font-semibold text-black">{selectedProduct.product_id}</span>
+                  <span className="font-semibold text-black">{selectedProduct?.product_id}</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                   <span className="text-xs font-bold uppercase text-gray-500">Nama Produk</span>
-                  <span className="font-semibold text-black">{selectedProduct.name}</span>
+                  <span className="font-semibold text-black">{selectedProduct?.name}</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                   <span className="text-xs font-bold uppercase text-gray-500">Harga</span>
-                  <span className="font-semibold text-black">{formatRupiah(selectedProduct.price)}</span>
+                  <span className="font-semibold text-black">{formatRupiah(selectedProduct?.price || "0")}</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-gray-100 pb-3">
                   <span className="text-xs font-bold uppercase text-gray-500">Kuantitas</span>
-                  <span className="font-medium text-gray-600">{selectedProduct.current_stock} Pcs</span>
+                  <span className="font-medium text-gray-600">{selectedProduct?.current_stock} Pcs</span>
                 </div>
                 <div className="flex justify-end pt-2">
                   <button onClick={closeModal} className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white">Tutup</button>
