@@ -8,10 +8,10 @@ import { Icon } from "@/components/icons";
 import { useAuth } from "@/context/AuthContext";
 
 const ROLE_HOMES: Record<string, string> = {
-  admin: "/admin",
-  cashier: "/cashier",
-  capster: "/worker",
-  customer: "/book",
+  ADMIN: "/admin",
+  CASHIER: "/cashier",
+  CAPSTER: "/worker",
+  CUSTOMER: "/book",
 };
 
 export default function LoginPage() {

@@ -8,17 +8,13 @@ export function proxy(request: NextRequest) {
 
   // 2. Cek apakah user mencoba masuk ke halaman /admin
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    
-    // Jika tidak ada role admin, tendang ke login
-    if (role !== 'admin') {
+    if (role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
-  // 3. Cek apakah user mencoba masuk ke halaman /worker (kapster)
   if (request.nextUrl.pathname.startsWith('/worker')) {
-    if (role !== 'worker' && role !== 'admin') { 
-      // Anggap admin juga boleh buka halaman worker
+    if (role !== 'CAPSTER' && role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url));
     }
   }
