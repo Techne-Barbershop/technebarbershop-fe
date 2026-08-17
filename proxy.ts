@@ -8,13 +8,13 @@ export function proxy(request: NextRequest) {
 
   // 2. Cek apakah user mencoba masuk ke halaman /admin
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (role !== 'ADMIN') {
+    if (role?.toUpperCase() !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
   if (request.nextUrl.pathname.startsWith('/worker')) {
-    if (role !== 'CAPSTER' && role !== 'ADMIN') {
+    if (role?.toUpperCase() !== 'CAPSTER' && role?.toUpperCase() !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url));
     }
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
@@ -20,8 +20,15 @@ import {
 
 export default function BookingConfirmationPage() {
   const router = useRouter();
-  const { state } = useBooking();
+  const { state, dispatch } = useBooking();
   const [copied, setCopied] = useState(false);
+  const [backHref, setBackHref] = useState("/book/details");
+
+  useEffect(() => {
+    if (localStorage.getItem("customer_token")) {
+      setBackHref("/book/schedule");
+    }
+  }, []);
 
   const { services, artist, date, time, user } = state;
 
@@ -61,10 +68,14 @@ export default function BookingConfirmationPage() {
     { label: "Hair Artist", value: artist.name },
   ];
 
+  const handleConfirm = () => {
+    router.push("/book/payment");
+  };
+
   return (
     <div>
       <div className="flex items-center gap-4">
-        <BackButton href="/book/details" />
+        <BackButton href={backHref} />
         <h1 className="text-[18px] font-bold text-ink">
           BOOKING CONFIRMATION
         </h1>
@@ -101,22 +112,26 @@ export default function BookingConfirmationPage() {
         <div className="mt-5 border-t border-line pt-4">
           <div className="flex flex-col gap-3.5">
             {services.map((service) => (
-              <div key={service.id} className="flex items-center gap-3.5">
-                <ImagePlaceholder
-                  icon="scissors"
-                  className="h-12 w-12 shrink-0 rounded-full border border-line"
-                  iconClassName="h-5 w-5"
-                />
+              <div key={service.service_id} className="flex items-center gap-3.5">
+                {service.image_url ? (
+                  <img src={service.image_url} alt={service.name} className="h-12 w-12 shrink-0 rounded-full object-cover border border-line" />
+                ) : (
+                  <ImagePlaceholder
+                    icon="scissors"
+                    className="h-12 w-12 shrink-0 rounded-full border border-line"
+                    iconClassName="h-5 w-5"
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-bold text-ink">
-                    {service.title}
+                    {service.name}
                   </div>
                   <div className="mt-0.5 text-[12px] text-graphite">
-                    {formatDuration(service.durationMinutes)}
+                    {formatDuration(service.duration_minutes)}
                   </div>
                 </div>
                 <div className="text-[14px] font-bold text-ink">
-                  {formatPrice(service.price)}
+                  {formatPrice(parseFloat(service.price))}
                 </div>
               </div>
             ))}
@@ -139,7 +154,7 @@ export default function BookingConfirmationPage() {
       </p>
 
       <BottomBar>
-        <PrimaryButton onClick={() => router.push("/book/payment")}>
+        <PrimaryButton onClick={handleConfirm}>
           Confirm Booking
         </PrimaryButton>
       </BottomBar>

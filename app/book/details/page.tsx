@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
@@ -50,26 +50,90 @@ export default function UserDetailsPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [submitted, setSubmitted] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+  const [sessionCustomer, setSessionCustomer] = useState<{name: string; phone: string; email: string} | null>(null);
+  const [isSessionChecking, setIsSessionChecking] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("customer_token");
+    if (!token) {
+      setIsSessionChecking(false);
+      return;
+    }
+
+    fetch("http://localhost:8080/api/auth/customer/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.data) {
+          setSessionCustomer(data.data);
+        } else {
+          localStorage.removeItem("customer_token");
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsSessionChecking(false));
+  }, []);
+
   const setField = (field: FieldKey, value: string) => {
     const next = { ...values, [field]: value };
     setValues(next);
     if (submitted) setErrors(validate(next));
   };
 
-  const handleContinue = () => {
+  const handleContinueAs = () => {
+    if (!sessionCustomer) return;
+    dispatch({
+      type: "SET_USER",
+      payload: {
+        name: sessionCustomer.name,
+        phone: sessionCustomer.phone,
+        email: sessionCustomer.email,
+      },
+    });
+    router.push("/book/confirm");
+  };
+
+  const handleSwitchAccount = () => {
+    localStorage.removeItem("customer_token");
+    setSessionCustomer(null);
+  };
+
+  const handleContinue = async () => {
     setSubmitted(true);
     const nextErrors = validate(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
-    dispatch({
-      type: "SET_USER",
-      payload: {
-        name: values.name.trim(),
-        phone: values.phone.trim(),
-        email: values.email.trim(),
-      },
-    });
-    router.push("/book/confirm");
+    
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/customer/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: values.email.trim() }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        setErrors({ email: data.error || "Failed to send OTP" });
+        setLoading(false);
+        return;
+      }
+      
+      dispatch({
+        type: "SET_USER",
+        payload: {
+          name: values.name.trim(),
+          phone: values.phone.trim(),
+          email: values.email.trim(),
+        },
+      });
+      router.push("/book/otp");
+    } catch (err) {
+      setErrors({ email: "Network error" });
+      setLoading(false);
+    }
   };
 
   const fields: {
@@ -105,6 +169,51 @@ export default function UserDetailsPage() {
       placeholder: "you@example.com",
     },
   ];
+
+  if (isSessionChecking) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <p className="text-[13px] text-graphite">Memuat data...</p>
+      </div>
+    );
+  }
+
+  if (sessionCustomer) {
+    return (
+      <div>
+        <div className="flex items-center gap-4">
+          <BackButton href="/book/schedule" />
+          <div>
+            <h1 className="text-[22px] font-bold text-ink">Welcome Back!</h1>
+            <p className="text-[13px] text-graphite">
+              Ready for your next cut, {sessionCustomer.name}?
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-7 flex flex-col gap-4">
+          <div className="rounded-2xl border border-line bg-paper p-5">
+            <div className="text-[15px] font-bold text-ink">{sessionCustomer.name}</div>
+            <div className="mt-1 text-[13px] text-graphite">{sessionCustomer.phone}</div>
+            <div className="text-[13px] text-graphite">{sessionCustomer.email}</div>
+          </div>
+          
+          <button 
+            onClick={handleSwitchAccount}
+            className="text-left text-[13px] font-semibold text-ink underline"
+          >
+            Booking sebagai customer lain
+          </button>
+        </div>
+
+        <BottomBar>
+          <PrimaryButton onClick={handleContinueAs}>
+            Lanjutkan sebagai {sessionCustomer.name.split(' ')[0]}
+          </PrimaryButton>
+        </BottomBar>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -158,7 +267,9 @@ export default function UserDetailsPage() {
       </p>
 
       <BottomBar>
-        <PrimaryButton onClick={handleContinue}>Continue</PrimaryButton>
+        <PrimaryButton onClick={handleContinue} disabled={loading}>
+          {loading ? "Sending OTP..." : "Continue"}
+        </PrimaryButton>
       </BottomBar>
     </div>
   );

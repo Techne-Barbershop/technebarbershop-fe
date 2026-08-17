@@ -27,12 +27,15 @@ export function formatTimer(totalSeconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function sumDurations(services: { durationMinutes: number }[]): number {
-  return services.reduce((total, service) => total + service.durationMinutes, 0);
+export function sumDurations(services: { durationMinutes?: number; duration_minutes?: number }[]): number {
+  return services.reduce((total, service) => total + (service.duration_minutes ?? service.durationMinutes ?? 0), 0);
 }
 
-export function sumPrices(services: { price: number }[]): number {
-  return services.reduce((total, service) => total + service.price, 0);
+export function sumPrices(services: { price: number | string }[]): number {
+  return services.reduce((total, service) => {
+    const p = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+    return total + (isNaN(p) ? 0 : p);
+  }, 0);
 }
 
 export function addMinutes(time: string, minutes: number): string {

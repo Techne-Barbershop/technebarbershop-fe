@@ -8,21 +8,37 @@ import { SecondaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import ImagePlaceholder from "@/components/ImagePlaceholder";
 import { useBooking } from "@/context/BookingContext";
-import { CATEGORIES } from "@/lib/constants";
 import { formatDuration, formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import type { Service, ServiceCategory } from "@/lib/types";
+import type { Category, Service } from "@/lib/types/admin";
+import { api, unwrap } from "@/lib/api";
 
 export default function ServiceSelectionPage() {
   const router = useRouter();
   const { state, dispatch } = useBooking();
   const [selected, setSelected] = useState<Service | null>(null);
 
-  const selectedServices = state.services;
+  const selectedServices = state.services as any as Service[]; // Cast because BookingState still uses the old Service type, we'll fix it later or just cast it
   const selectedIds = useMemo(
-    () => new Set(selectedServices.map((service) => service.id)),
+    () => new Set(selectedServices.map((service) => service.service_id)),
     [selectedServices],
   );
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api<{ data: { categories: Category[] } }>("/api/categories")
+      .then((res) => {
+        setCategories(res.data.categories || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = selected ? "hidden" : "";
@@ -31,23 +47,23 @@ export default function ServiceSelectionPage() {
     };
   }, [selected]);
 
-  const isSelected = (service: Service) => selectedIds.has(service.id);
+  const isSelected = (service: Service) => selectedIds.has(service.service_id);
 
   const toggleService = (service: Service) => {
     if (isSelected(service)) {
       dispatch({
         type: "SET_SERVICES",
-        payload: selectedServices.filter((item) => item.id !== service.id),
+        payload: selectedServices.filter((item) => item.service_id !== service.service_id) as any,
       });
     } else {
       dispatch({
         type: "SET_SERVICES",
         payload: [
           ...selectedServices.filter(
-            (item) => item.categoryId !== service.categoryId,
+            (item) => item.category_id !== service.category_id,
           ),
           service,
-        ],
+        ] as any,
       });
     }
   };
@@ -55,14 +71,12 @@ export default function ServiceSelectionPage() {
   const removeService = (id: string) => {
     dispatch({
       type: "SET_SERVICES",
-      payload: selectedServices.filter((item) => item.id !== id),
+      payload: selectedServices.filter((item) => item.service_id !== id) as any,
     });
   };
 
-
-
-  const getCategory = (categoryId: string): ServiceCategory | undefined =>
-    CATEGORIES.find((category) => category.id === categoryId);
+  const getCategory = (categoryId: string): Category | undefined =>
+    categories.find((category) => category.category_id === categoryId);
 
   return (
     <div>
@@ -77,14 +91,20 @@ export default function ServiceSelectionPage() {
       </div>
 
       <div className="mt-5 flex flex-col pb-24">
-        {CATEGORIES.map((category) => (
-          <section key={category.id} className="mt-7 first:mt-0">
-            <ImagePlaceholder
-              icon={category.icon}
-              label={category.name}
-              className="aspect-[16/6] w-full rounded-2xl border border-line"
-              iconClassName="h-10 w-10"
-            />
+        {loading && <p className="text-center text-sm text-gray-500 mt-10">Memuat layanan...</p>}
+        {error && <p className="text-center text-sm text-red-500 mt-10">{error}</p>}
+        {categories.map((category) => (
+          <section key={category.category_id} className="mt-7 first:mt-0">
+            {category.image_url ? (
+              <img src={category.image_url} alt={category.name} className="aspect-[16/6] w-full rounded-2xl object-cover border border-line" />
+            ) : (
+              <ImagePlaceholder
+                icon="scissors"
+                label={category.name}
+                className="aspect-[16/6] w-full rounded-2xl border border-line"
+                iconClassName="h-10 w-10"
+              />
+            )}
             <h2 className="mt-4 border-b border-line pb-2.5 text-[15px] font-bold tracking-wide text-ink uppercase">
               {category.name}
             </h2>
@@ -93,23 +113,27 @@ export default function ServiceSelectionPage() {
                 const picked = isSelected(service);
                 return (
                   <div
-                    key={service.id}
+                    key={service.service_id}
                     className="flex items-center gap-3 py-3.5"
                   >
-                    <ImagePlaceholder
-                      icon={category.icon}
-                      className="h-12 w-12 shrink-0 rounded-xl border border-line"
-                      iconClassName="h-5 w-5"
-                    />
+                    {service.image_url ? (
+                      <img src={service.image_url} alt={service.name} className="h-12 w-12 shrink-0 rounded-xl object-cover border border-line" />
+                    ) : (
+                      <ImagePlaceholder
+                        icon="scissors"
+                        className="h-12 w-12 shrink-0 rounded-xl border border-line"
+                        iconClassName="h-5 w-5"
+                      />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[15px] font-bold text-ink">
-                        {service.title}
+                        {service.name}
                       </div>
                       <div className="mt-0.5 text-[12.5px] text-graphite">
-                        {formatDuration(service.durationMinutes)}
+                        {formatDuration(service.duration_minutes)}
                         <span className="mx-1.5 text-line">·</span>
                         <span className="font-semibold text-ink">
-                          {formatPrice(service.price)}
+                          {formatPrice(parseFloat(service.price))}
                         </span>
                       </div>
                       <button
@@ -124,7 +148,7 @@ export default function ServiceSelectionPage() {
                       type="button"
                       role="radio"
                       aria-checked={picked}
-                      aria-label={`${picked ? "Deselect" : "Select"} ${service.title}`}
+                      aria-label={`${picked ? "Deselect" : "Select"} ${service.name}`}
                       onClick={() => toggleService(service)}
                       className={cn(
                         "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition active:scale-95",
@@ -153,18 +177,22 @@ export default function ServiceSelectionPage() {
             <div className="no-scrollbar overflow-y-auto px-5 pt-3 pb-40">
               <div className="mx-auto h-1.5 w-10 rounded-full bg-line" />
 
-              <ImagePlaceholder
-                icon={getCategory(selected.categoryId)?.icon ?? "image"}
-                label="Service"
-                className="mt-3 aspect-[16/7] w-full border-2 border-ink"
-              />
+              {selected.image_url ? (
+                <img src={selected.image_url} alt={selected.name} className="mt-3 aspect-square w-full rounded-2xl object-cover border border-line" />
+              ) : (
+                <ImagePlaceholder
+                  icon="scissors"
+                  label={selected.name}
+                  className="mt-3 aspect-square w-full rounded-2xl border border-line"
+                />
+              )}
 
               <h2 className="mt-4 text-[22px] font-bold text-ink">
-                {selected.title}
+                {selected.name}
               </h2>
               <p className="mt-1 text-[13px] text-graphite">
-                {formatDuration(selected.durationMinutes)} ·{" "}
-                {formatPrice(selected.price)}
+                {formatDuration(selected.duration_minutes)} ·{" "}
+                {formatPrice(parseFloat(selected.price))}
               </p>
 
               <div className="mt-5">
@@ -174,25 +202,6 @@ export default function ServiceSelectionPage() {
                 <p className="mt-2 text-[13.5px] leading-relaxed text-graphite">
                   {selected.description}
                 </p>
-              </div>
-
-              <div className="mt-5">
-                <h3 className="text-[13px] font-bold tracking-[0.15em] text-ink">
-                  WHAT YOU&apos;LL GET
-                </h3>
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  {selected.includes.map((feature) => (
-                    <div
-                      key={feature.label}
-                      className="flex items-center gap-2.5 rounded-xl border border-line bg-mist px-3 py-2.5"
-                    >
-                      <Icon name={feature.icon} className="h-5 w-5 text-ink" />
-                      <span className="text-[12.5px] font-medium text-graphite">
-                        {feature.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
 

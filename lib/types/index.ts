@@ -1,11 +1,13 @@
 import type { IconName } from "@/components/icons";
 
+import type { Service } from "./admin";
+
 export interface Feature {
   icon: IconName;
   label: string;
 }
 
-export interface Service {
+export interface MockService {
   id: string;
   categoryId: string;
   title: string;
@@ -20,7 +22,7 @@ export interface ServiceCategory {
   name: string;
   tagline: string;
   icon: IconName;
-  services: Service[];
+  services: MockService[];
 }
 
 export interface Artist {
@@ -61,6 +63,8 @@ export interface BookingState {
   time: string | null;
   user: UserDetails | null;
   paymentMethod: PaymentMethod | null;
+  reservationId: string | null;
+  expiresAt: string | null;
 }
 
 export type ReservationStatus = "Booked" | "Completed" | "Canceled";
