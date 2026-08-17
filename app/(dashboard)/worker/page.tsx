@@ -235,7 +235,7 @@ export default function WorkerDashboardPage() {
                   <div>
                     <h3 className="text-[16px] font-bold text-ink">{res.customer_name}</h3>
                     <p className="text-[13px] font-medium text-graphite">
-                      {res.start_time} • {res.service_name}
+                      {res.start_time} • {res.service_names}
                     </p>
                   </div>
                   <div
@@ -323,7 +323,7 @@ export default function WorkerDashboardPage() {
                             <div className="text-[11px] font-bold truncate">{res.customer_name}</div>
                             {height >= 40 && (
                               <div className="text-[10px] font-medium opacity-80 mt-0.5 truncate">
-                                {res.start_time} • {res.service_name}
+                                {res.start_time} • {res.service_names}
                               </div>
                             )}
                           </div>
@@ -391,8 +391,8 @@ export default function WorkerDashboardPage() {
 
                   <div>
                     <div className="text-[11px] font-bold tracking-widest text-graphite uppercase mb-1">Service</div>
-                    <div className="text-[15px] font-semibold text-ink">{selectedRes.service_name}</div>
-                    <div className="text-[13px] text-graphite mt-0.5 ml-6">{formatPrice(Number(selectedRes.service_price))}</div>
+                    <div className="text-[15px] font-semibold text-ink">{selectedRes.service_names}</div>
+                    <div className="text-[13px] text-graphite mt-0.5 ml-6">{formatPrice(Number(selectedRes.service_total))}</div>
                   </div>
                 </div>
               </div>

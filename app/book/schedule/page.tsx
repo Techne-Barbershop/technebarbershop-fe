@@ -37,36 +37,28 @@ export default function SchedulePage() {
   const cells = useMemo(() => getMonthMatrix(year, month), [year, month]);
 
   const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [monthLoading, setMonthLoading] = useState(false);
 
   const [slots, setSlots] = useState<{ time: string; available: boolean }[]>([]);
-  const [dayLoading, setDayLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     if (!artist) return;
-    setMonthLoading(true);
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/availability/month?worker_id=${artist.id}&year=${year}&month=${month + 1}`)
       .then((res) => res.json())
       .then((data) => {
         setAvailableDates(data.data?.available_dates || []);
       })
-      .catch((err) => console.error(err))
-      .finally(() => setMonthLoading(false));
+      .catch((err) => console.error(err));
   }, [artist, year, month]);
 
   useEffect(() => {
-    if (!artist || !selectedDate) {
-      setSlots([]);
-      return;
-    }
-    setDayLoading(true);
+    if (!artist || !selectedDate) return;
     fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/availability/day?worker_id=${artist.id}&date=${selectedDate}`)
       .then((res) => res.json())
       .then((data) => {
         setSlots(data.data?.slots || []);
       })
-      .catch((err) => console.error(err))
-      .finally(() => setDayLoading(false));
+      .catch((err) => console.error(err));
   }, [artist, selectedDate]);
 
   if (!artist) {
@@ -130,8 +122,6 @@ export default function SchedulePage() {
 
   const canCheckout = Boolean(selectedDate && selectedTime);
 
-  const [checking, setChecking] = useState(false);
-
   const handleCheckout = async () => {
     if (!selectedDate || !selectedTime) return;
     setChecking(true);
@@ -142,9 +132,9 @@ export default function SchedulePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           capster_id: artist.id,
+          service_ids: services.map((service) => service.service_id),
           booking_date: selectedDate,
           start_time: selectedTime,
-          duration_minutes: totalDuration,
         }),
       });
 
@@ -340,7 +330,7 @@ export default function SchedulePage() {
         <SecondaryButton onClick={handleCancel}>Cancel</SecondaryButton>
         <PrimaryButton
           onClick={handleCheckout}
-          disabled={!canCheckout}
+          disabled={!canCheckout || checking}
           className={cn(!canCheckout && "cursor-not-allowed")}
         >
           Checkout

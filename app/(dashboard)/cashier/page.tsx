@@ -203,7 +203,7 @@ export default function CashierPage() {
                     <div>
                       <h3 className="text-[16px] font-bold text-ink">{res.customer_name}</h3>
                       <p className="text-[13px] font-medium text-graphite">
-                        {res.start_time} • {res.service_name} • {res.capster_name}
+                        {res.start_time} • {res.service_names} • {res.capster_name}
                       </p>
                     </div>
                     <div
@@ -222,7 +222,7 @@ export default function CashierPage() {
                     <span className="flex items-center gap-1.5 text-[12px] font-semibold text-ink">
                       <Icon name={isPaid ? "check" : "close"} className={cn("h-4 w-4", isPaid ? "text-ink" : "text-smoke")} />
                       {isPaid ? `Lunas (${res.payment_method || "CASH"})` : "Belum Bayar"}
-                      <span className="text-gray-400">• {formatPrice(Number(res.service_price))}</span>
+                      <span className="text-gray-400">• {formatPrice(Number(res.service_total))}</span>
                     </span>
                     {res.reservation_status !== "CANCELLED" && !isPaid && (
                       <button
@@ -302,7 +302,7 @@ export default function CashierPage() {
                               <div className="truncate text-[11px] font-bold">{res.customer_name}</div>
                               {height >= 40 ? (
                                 <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">
-                                  {res.start_time} • {res.service_name}
+                                  {res.start_time} • {res.service_names}
                                 </div>
                               ) : null}
                               {height >= 54 ? (
@@ -399,8 +399,8 @@ export default function CashierPage() {
 
                   <div>
                     <div className="mb-1 text-[11px] font-bold tracking-widest text-graphite uppercase">Service</div>
-                    <div className="text-[15px] font-semibold text-ink">{selectedRes.service_name}</div>
-                    <div className="ml-6 mt-0.5 text-[13px] text-graphite">{formatPrice(Number(selectedRes.service_price))}</div>
+                    <div className="text-[15px] font-semibold text-ink">{selectedRes.service_names}</div>
+                    <div className="ml-6 mt-0.5 text-[13px] text-graphite">{formatPrice(Number(selectedRes.service_total))}</div>
                   </div>
 
                   <div className="flex items-center justify-between rounded-xl border border-line bg-mist px-4 py-3">

@@ -259,12 +259,17 @@ export default function KalenderPage() {
 
             <div>
               <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-500">Customer</div>
-              <div className="text-[15px] font-semibold text-black">{selectedRes.customer_id}</div>
+              <div className="text-[15px] font-semibold text-black">{selectedRes.customer_name || selectedRes.customer_id}</div>
+            </div>
+
+            <div>
+              <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-500">Capster</div>
+              <div className="text-[15px] font-semibold text-black">{selectedRes.capster_name || selectedRes.capster_id}</div>
             </div>
 
             <div>
               <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-500">Layanan</div>
-              <div className="text-[15px] font-semibold text-black">{selectedRes.service_ids?.length || 0} layanan (ID: {selectedRes.service_ids?.join(", ")})</div>
+              <div className="text-[15px] font-semibold text-black">{selectedRes.service_names || `${selectedRes.service_ids?.length || 0} layanan`}</div>
             </div>
 
             <div>

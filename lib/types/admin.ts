@@ -106,8 +106,11 @@ export type ReservationStatus = "BOOKED" | "COMPLETED" | "CANCELLED";
 export interface Reservation {
   reservation_id: string;
   customer_id: string;
+  customer_name: string;
   service_ids: string[];
+  service_names: string;
   capster_id: string;
+  capster_name: string;
   booking_date: string;
   start_time: string;
   duration_minutes: number;
@@ -225,9 +228,9 @@ export interface WorkerReservation {
   customer_name: string;
   customer_phone: string;
   customer_email: string;
-  service_id: string;
-  service_name: string;
-  service_price: string;
+  service_ids: string[];
+  service_names: string;
+  service_total: string;
   capster_id: string;
   booking_date: string;
   start_time: string;
@@ -246,9 +249,10 @@ export interface CashierReservation {
   customer_name: string;
   customer_phone: string;
   customer_email: string;
-  service_id: string;
-  service_name: string;
-  service_price: string;
+  service_names: string;
+  service_ids: string;
+  service_total: string;
+  item_count: number;
   capster_id: string;
   capster_name: string;
   booking_date: string;
