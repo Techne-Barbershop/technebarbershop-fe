@@ -633,7 +633,7 @@ export default function StafPage() {
 
         <form onSubmit={handleSaveStaff} className="space-y-4">
           <div className={cn("space-y-4", staffFormTab !== "info" && "hidden")}>
-            <ImageUpload value={formData.image_url} onChange={(url) => setFormData({ ...formData, image_url: url })} aspectRatio={1} label="Foto Profil" />
+            <ImageUpload value={formData.image_url} onChange={(url) => setFormData({ ...formData, image_url: url })} aspectRatio={16/9} label="Foto Profil" />
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-600">Nama Lengkap</label>
@@ -708,19 +708,17 @@ export default function StafPage() {
       <Modal isOpen={staffModalState === "detail"} onClose={() => setStaffModalState("none")} title="Detail Staf">
         {selectedStaff && (
           <div className="space-y-5">
-            <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+            <div className="flex flex-col gap-4 border-b border-gray-100 pb-4">
               {selectedStaff.image_url ? (
-                <img src={selectedStaff.image_url} alt={selectedStaff.name} className="h-16 w-16 rounded-full object-cover border border-gray-200" />
+                <img src={selectedStaff.image_url} alt={selectedStaff.name} className="aspect-[16/9] w-full rounded-2xl object-cover border border-gray-200" />
               ) : (
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-black text-2xl font-bold text-white">
+                <div className="flex aspect-[16/9] w-full shrink-0 items-center justify-center rounded-2xl bg-black text-4xl font-bold text-white">
                   {selectedStaff.name.charAt(0).toUpperCase()}
                 </div>
               )}
               <div>
                 <h3 className="text-lg font-bold text-black">{selectedStaff.name}</h3>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700 mt-1">
-                  {ROLE_LABELS[selectedStaff.role] ?? selectedStaff.role}
-                </span>
+                <p className="text-sm font-medium text-gray-500 uppercase">{ROLE_LABELS[selectedStaff.role] ?? selectedStaff.role}</p>
               </div>
             </div>
 

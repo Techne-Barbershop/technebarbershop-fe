@@ -224,7 +224,7 @@ export default function KalenderPage() {
                             <div className="truncate text-[11px] font-bold">{res.customer_id}</div>
                             {height >= 40 && (
                               <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">
-                                {res.start_time} • {res.service_id}
+                                {res.start_time} • {res.service_ids?.length || 0} layanan
                               </div>
                             )}
                           </div>
@@ -264,7 +264,7 @@ export default function KalenderPage() {
 
             <div>
               <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-gray-500">Layanan</div>
-              <div className="text-[15px] font-semibold text-black">{selectedRes.service_id}</div>
+              <div className="text-[15px] font-semibold text-black">{selectedRes.service_ids?.length || 0} layanan (ID: {selectedRes.service_ids?.join(", ")})</div>
             </div>
 
             <div>

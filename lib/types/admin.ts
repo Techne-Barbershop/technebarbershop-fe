@@ -106,7 +106,7 @@ export type ReservationStatus = "BOOKED" | "COMPLETED" | "CANCELLED";
 export interface Reservation {
   reservation_id: string;
   customer_id: string;
-  service_id: string;
+  service_ids: string[];
   capster_id: string;
   booking_date: string;
   start_time: string;

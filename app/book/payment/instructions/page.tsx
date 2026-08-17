@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
+import PaymentTimer from "@/components/PaymentTimer";
 import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
@@ -19,10 +20,10 @@ function buildPaymentPayload(state: BookingState, totalPrice: number) {
     bookingId: `HN-${Date.now()}`,
     store: { name: STORE.name, location: STORE.location },
     services: state.services.map((service) => ({
-      id: service.id,
-      title: service.title,
-      durationMinutes: service.durationMinutes,
-      price: service.price,
+      id: service.service_id,
+      title: service.name,
+      durationMinutes: service.duration_minutes,
+      price: parseFloat(service.price),
     })),
     artist: state.artist
       ? { id: state.artist.id, name: state.artist.name }
@@ -95,7 +96,7 @@ function QrPattern({ className }: { className?: string }) {
 
 export default function PaymentInstructionsPage() {
   const router = useRouter();
-  const { state, reset } = useBooking();
+  const { state, reset, dispatch } = useBooking();
   const [status, setStatus] = useState<Status>("idle");
   const [copied, setCopied] = useState(false);
 
@@ -115,15 +116,55 @@ export default function PaymentInstructionsPage() {
     }
   };
 
-  const handleComplete = () => {
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    if (!state.reservationId) {
+      router.push("/");
+      return;
+    }
+    
+    if (!confirm("Yakin ingin membatalkan reservasi ini?")) return;
+    
+    setCancelling(true);
+    try {
+      const token = localStorage.getItem("customer_token");
+      await fetch(`http://localhost:8080/api/reservations/${state.reservationId}/cancel`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      dispatch({ type: "RESET" });
+      router.push("/");
+    } catch (e) {
+      alert("Gagal membatalkan");
+      setCancelling(false);
+    }
+  };
+
+  const handleComplete = async () => {
     if (status !== "idle") return;
     setStatus("submitting");
-    const payload = buildPaymentPayload(state, totalPrice);
-    console.log(
-      "[Booking] Final payload to backend / Midtrans:",
-      JSON.stringify(payload, null, 2),
-    );
-    setTimeout(() => setStatus("success"), 1500);
+
+    try {
+      const token = localStorage.getItem("customer_token");
+      const res = await fetch(`http://localhost:8080/api/reservations/${state.reservationId}/pay`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to process payment");
+      }
+
+      setStatus("success");
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong when submitting booking.");
+      setStatus("idle");
+    }
   };
 
   const handleDone = () => {
@@ -148,14 +189,15 @@ export default function PaymentInstructionsPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-4">
-        <BackButton href="/book/payment" />
-        <div>
-          <h1 className="text-[22px] font-bold text-ink">Payment</h1>
-          <p className="text-[13px] text-graphite">
-            {method.name} · {formatPrice(totalPrice)}
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-[22px] font-bold text-ink">Payment</h1>
+        <PaymentTimer />
+      </div>
+
+      <div className="mt-1">
+        <p className="text-[13px] text-graphite">
+          {method.name} · {formatPrice(totalPrice)}
+        </p>
       </div>
 
       <div className="mt-6 flex flex-col gap-5">
@@ -228,7 +270,7 @@ export default function PaymentInstructionsPage() {
               {formatDuration(totalDuration)}
             </div>
             <div className="text-[13px] font-semibold text-ink">
-              {services.map((service) => service.title).join(" + ")}
+              {services.map((service) => service.name).join(" + ")}
             </div>
           </div>
           <div className="text-[17px] font-bold text-ink">
@@ -238,13 +280,22 @@ export default function PaymentInstructionsPage() {
       </div>
 
       <BottomBar>
-        <PrimaryButton
-          onClick={handleComplete}
-          disabled={status !== "idle"}
-          className={status !== "idle" ? "cursor-wait" : undefined}
-        >
-          {status === "submitting" ? "Processing..." : "Complete Payment"}
-        </PrimaryButton>
+        <div className="flex flex-col gap-3 w-full">
+          <PrimaryButton
+            onClick={handleComplete}
+            disabled={status !== "idle"}
+            className={status !== "idle" ? "cursor-wait" : undefined}
+          >
+            {status === "submitting" ? "Processing..." : "Complete Payment"}
+          </PrimaryButton>
+          <button
+            onClick={handleCancel}
+            disabled={cancelling || status !== "idle"}
+            className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 text-[15px] font-bold text-red-600 transition active:scale-[0.99] disabled:opacity-50"
+          >
+            {cancelling ? "Membatalkan..." : "Batalkan Reservasi"}
+          </button>
+        </div>
       </BottomBar>
 
       {status !== "idle" ? (

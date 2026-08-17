@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
@@ -10,8 +10,6 @@ import { useBooking } from "@/context/BookingContext";
 import {
   formatDateID,
   getMonthMatrix,
-  getTimeSlots,
-  isDateAvailable,
   toISODate,
   todayISO,
   WEEKDAYS,
@@ -37,6 +35,39 @@ export default function SchedulePage() {
   const [selectedTime, setSelectedTime] = useState<string | null>(state.time);
 
   const cells = useMemo(() => getMonthMatrix(year, month), [year, month]);
+
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [monthLoading, setMonthLoading] = useState(false);
+
+  const [slots, setSlots] = useState<{ time: string; available: boolean }[]>([]);
+  const [dayLoading, setDayLoading] = useState(false);
+
+  useEffect(() => {
+    if (!artist) return;
+    setMonthLoading(true);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/availability/month?worker_id=${artist.id}&year=${year}&month=${month + 1}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setAvailableDates(data.data?.available_dates || []);
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setMonthLoading(false));
+  }, [artist, year, month]);
+
+  useEffect(() => {
+    if (!artist || !selectedDate) {
+      setSlots([]);
+      return;
+    }
+    setDayLoading(true);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/availability/day?worker_id=${artist.id}&date=${selectedDate}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setSlots(data.data?.slots || []);
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setDayLoading(false));
+  }, [artist, selectedDate]);
 
   if (!artist) {
     return (
@@ -80,7 +111,7 @@ export default function SchedulePage() {
     setSelectedTime(null);
   };
 
-  const slots = selectedDate ? getTimeSlots(artist.id, selectedDate) : [];
+  // slots are now fetched via useEffect
 
   const canStartAt = (index: number) => {
     if (index + slotsNeeded > slots.length) return false;
@@ -99,13 +130,52 @@ export default function SchedulePage() {
 
   const canCheckout = Boolean(selectedDate && selectedTime);
 
-  const handleCheckout = () => {
+  const [checking, setChecking] = useState(false);
+
+  const handleCheckout = async () => {
     if (!selectedDate || !selectedTime) return;
-    dispatch({
-      type: "SET_DATETIME",
-      payload: { date: selectedDate, time: selectedTime },
-    });
-    router.push("/book/details");
+    setChecking(true);
+
+    try {
+      const res = await fetch("http://localhost:8080/api/reservations/check-slot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          capster_id: artist.id,
+          booking_date: selectedDate,
+          start_time: selectedTime,
+          duration_minutes: totalDuration,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to check slot");
+      }
+
+      const data = await res.json();
+      if (!data.data?.available) {
+        alert("Maaf, jadwal ini baru saja diambil oleh pelanggan lain. Silakan pilih waktu lain.");
+        setChecking(false);
+        // Refresh slot data
+        window.location.reload();
+        return;
+      }
+
+      dispatch({
+        type: "SET_DATETIME",
+        payload: { date: selectedDate, time: selectedTime },
+      });
+      
+      if (state.user) {
+        router.push("/book/confirm");
+      } else {
+        router.push("/book/details");
+      }
+    } catch (err) {
+      console.error("Slot check error:", err);
+      alert("Terjadi kesalahan saat memeriksa ketersediaan jadwal.");
+      setChecking(false);
+    }
   };
 
   const handleCancel = () => {
@@ -163,7 +233,7 @@ export default function SchedulePage() {
               return <div key={`empty-${index}`} />;
             }
             const iso = toISODate(cell);
-            const available = isDateAvailable(artist.id, iso);
+            const available = availableDates.includes(iso);
             const isSelected = selectedDate === iso;
             const isPast = iso < today;
             const disabled = !available || isPast;
@@ -204,9 +274,9 @@ export default function SchedulePage() {
             </div>
             <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-line p-3 text-[12.5px] text-graphite">
               {services.map((svc) => (
-                <div key={svc.id} className="flex items-center justify-between">
-                  <span>{svc.title}</span>
-                  <span>{formatDuration(svc.durationMinutes)}</span>
+                <div key={svc.service_id} className="flex items-center justify-between">
+                  <span>{svc.name}</span>
+                  <span>{formatDuration(svc.duration_minutes)}</span>
                 </div>
               ))}
               <div className="mt-1 flex items-center justify-between border-t border-line pt-2 font-bold text-ink">

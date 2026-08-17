@@ -8,7 +8,7 @@ import {
   sumDurations,
 } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import type { Service } from "@/lib/types";
+import type { Service } from "@/lib/types/admin";
 
 export default function CheckoutCart({
   items,
@@ -22,11 +22,11 @@ export default function CheckoutCart({
   const [expanded, setExpanded] = useState(false);
   const count = items.length;
   const totalPrice = useMemo(
-    () => items.reduce((sum, item) => sum + item.price, 0),
+    () => items.reduce((sum, item) => sum + parseFloat(item.price), 0),
     [items],
   );
   const totalDuration = useMemo(
-    () => sumDurations(items),
+    () => items.reduce((sum, item) => sum + item.duration_minutes, 0),
     [items],
   );
 
@@ -48,20 +48,20 @@ export default function CheckoutCart({
               <div className="mt-1 flex flex-col divide-y divide-fog">
                 {items.map((item) => (
                   <div
-                    key={item.id}
+                    key={item.service_id}
                     className="flex items-center justify-between gap-3 py-2.5"
                   >
                     <span className="min-w-0 truncate text-[12px] font-semibold tracking-wide text-graphite uppercase">
-                      {item.title} ({formatDurationShort(item.durationMinutes)})
+                      {item.name} ({formatDurationShort(item.duration_minutes)})
                     </span>
                     <div className="flex shrink-0 items-center gap-2.5">
                       <span className="text-[12.5px] text-graphite">
-                        (1) {item.price.toLocaleString("id-ID")}
+                        (1) {parseFloat(item.price).toLocaleString("id-ID")}
                       </span>
                       <button
                         type="button"
-                        onClick={() => onRemove(item.id)}
-                        aria-label={`Remove ${item.title}`}
+                        onClick={() => onRemove(item.service_id)}
+                        aria-label={`Remove ${item.name}`}
                         className="flex h-6 w-6 items-center justify-center rounded-md text-graphite transition hover:bg-fog active:scale-90"
                       >
                         <Icon name="close" className="h-4 w-4" />

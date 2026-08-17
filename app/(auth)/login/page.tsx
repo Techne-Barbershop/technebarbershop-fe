@@ -28,7 +28,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const user = await login(email, password);
-      const home = ROLE_HOMES[user.role] ?? "/book";
+      const home = ROLE_HOMES[user.role.toUpperCase()] ?? "/book";
       router.push(home);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login gagal");

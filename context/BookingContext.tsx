@@ -6,9 +6,9 @@ import type {
   Artist,
   BookingState,
   PaymentMethod,
-  Service,
   UserDetails,
 } from "@/lib/types";
+import type { Service } from "@/lib/types/admin";
 
 const TIMER_SECONDS = 5 * 60;
 
@@ -18,6 +18,8 @@ type Action =
   | { type: "SET_DATETIME"; payload: { date: string; time: string } }
   | { type: "SET_USER"; payload: UserDetails }
   | { type: "SET_PAYMENT"; payload: PaymentMethod }
+  | { type: "SET_RESERVATION"; payload: { id: string; expiresAt: string } }
+  | { type: "HYDRATE"; payload: BookingState }
   | { type: "RESET" };
 
 const initialState: BookingState = {
@@ -27,6 +29,8 @@ const initialState: BookingState = {
   time: null,
   user: null,
   paymentMethod: null,
+  reservationId: null,
+  expiresAt: null,
 };
 
 function reducer(state: BookingState, action: Action): BookingState {
@@ -41,6 +45,10 @@ function reducer(state: BookingState, action: Action): BookingState {
       return { ...state, user: action.payload };
     case "SET_PAYMENT":
       return { ...state, paymentMethod: action.payload };
+    case "SET_RESERVATION":
+      return { ...state, reservationId: action.payload.id, expiresAt: action.payload.expiresAt };
+    case "HYDRATE":
+      return action.payload;
     case "RESET":
       return initialState;
     default:
@@ -60,6 +68,35 @@ const BookingContext = createContext<BookingContextValue | null>(null);
 export function BookingProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [timer, setTimer] = useState(TIMER_SECONDS);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    const savedState = localStorage.getItem("booking_state");
+    const isInstructionsPage = window.location.pathname === "/book/payment/instructions";
+    const isBookingPage = window.location.pathname.startsWith("/book");
+
+    if (isInstructionsPage && savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        dispatch({ type: "HYDRATE", payload: parsed });
+      } catch (e) {
+        localStorage.removeItem("booking_state");
+        window.location.replace("/");
+      }
+    } else {
+      localStorage.removeItem("booking_state");
+      if (isBookingPage && window.location.pathname !== "/book") {
+        window.location.replace("/");
+      }
+    }
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem("booking_state", JSON.stringify(state));
+    }
+  }, [state, isHydrated]);
 
   useEffect(() => {
     const id = setInterval(() => {

@@ -8,7 +8,7 @@ import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
 import { PAYMENT_METHODS } from "@/lib/constants";
-import { formatPrice, sumPrices } from "@/lib/utils/format";
+import { formatPrice, sumPrices, sumDurations } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import type { PaymentMethodId } from "@/lib/types";
 
@@ -21,11 +21,55 @@ export default function PaymentMethodPage() {
 
   const totalPrice = sumPrices(state.services);
 
-  const handleContinue = () => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleContinue = async () => {
     const method = PAYMENT_METHODS.find((item) => item.id === selectedId);
     if (!method) return;
-    dispatch({ type: "SET_PAYMENT", payload: method });
-    router.push("/book/payment/instructions");
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("customer_token");
+      const res = await fetch("http://localhost:8080/api/reservations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          capster_id: state.artist?.id,
+          service_ids: state.services.map((s) => s.service_id),
+          booking_date: state.date,
+          start_time: state.time,
+          duration_minutes: sumDurations(state.services),
+          notes: `Payment Method: ${method.name}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal membuat reservasi. Jadwal mungkin telah diambil orang lain.");
+      }
+
+      const resData = await res.json();
+      
+      dispatch({
+        type: "SET_RESERVATION",
+        payload: {
+          id: resData.data.reservation_id,
+          expiresAt: resData.data.expires_at,
+        },
+      });
+
+      dispatch({ type: "SET_PAYMENT", payload: method });
+      router.push("/book/payment/instructions");
+    } catch (err: any) {
+      alert(err.message);
+      setSubmitting(false);
+      router.push("/book/schedule"); // Kick back to schedule if failed
+    }
   };
 
   return (
@@ -33,11 +77,12 @@ export default function PaymentMethodPage() {
       <div className="flex items-center gap-4">
         <BackButton href="/book/confirm" />
         <div>
-          <h1 className="text-[22px] font-bold text-ink">Payment Method</h1>
-          <p className="text-[13px] text-graphite">
+        <h1 className="text-[22px] font-bold text-ink">Payment Method</h1>
+        <p className="text-[13px] text-graphite mt-1">
             Choose how you&apos;d like to pay for your booking.
           </p>
         </div>
+
       </div>
 
       <div className="mt-6 flex flex-col gap-3">
@@ -91,10 +136,10 @@ export default function PaymentMethodPage() {
           </div>
           <PrimaryButton
             onClick={handleContinue}
-            disabled={!selectedId}
-            className={cn(!selectedId && "cursor-not-allowed")}
+            disabled={!selectedId || submitting}
+            className={cn((!selectedId || submitting) && "cursor-not-allowed")}
           >
-            Continue to Payment
+            {submitting ? "Processing..." : "Continue to Payment"}
           </PrimaryButton>
         </div>
       </BottomBar>

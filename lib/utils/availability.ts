@@ -67,17 +67,7 @@ export function formatDateID(iso: string): string {
   return `${day} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-export function isDateAvailable(artistId: string, iso: string): boolean {
-  const value = hash(`${artistId}|${iso}`) % 10;
-  return value !== 3 && value !== 7;
-}
 
-export function getTimeSlots(artistId: string, iso: string): TimeSlot[] {
-  return SLOTS.map((time) => ({
-    time,
-    available: hash(`${artistId}|${iso}|${time}`) % 5 !== 0,
-  }));
-}
 
 export type CalendarCell = Date | null;
 
