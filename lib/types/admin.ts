@@ -239,3 +239,30 @@ export interface WorkerReservation {
 export interface WorkerReservationsResponse {
   reservations: WorkerReservation[];
 }
+
+export interface CashierReservation {
+  reservation_id: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  service_id: string;
+  service_name: string;
+  service_price: string;
+  capster_id: string;
+  capster_name: string;
+  booking_date: string;
+  start_time: string;
+  duration_minutes: number;
+  reservation_status: WorkerReservationStatus;
+  notes: string;
+  transaction_id: string;
+  payment_id: string;
+  payment_method: string;
+  payment_status: string;
+  gross_amount: string;
+}
+
+export interface CashierReservationsResponse {
+  reservations: CashierReservation[];
+}
