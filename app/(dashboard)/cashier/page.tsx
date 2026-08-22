@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils/cn";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
 import { formatDuration, formatPrice } from "@/lib/utils/format";
 
-const TABS: { id: WorkerReservationStatus; label: string }[] = [
-  { id: "BOOKED", label: "Booked" },
+const TABS: { id: string; label: string }[] = [
+  { id: "booked", label: "Booked" },
+  { id: "walkin", label: "Walk In" },
   { id: "COMPLETED", label: "Completed" },
   { id: "CANCELLED", label: "Canceled" },
 ];
@@ -36,12 +37,23 @@ const STATUS_LABELS: Record<WorkerReservationStatus, string> = {
   CANCELLED: "Canceled",
 };
 
+const isWalkIn = (res: CashierReservation) =>
+  res.customer_name === "WALK IN" || res.notes === "WALK IN";
+
 export default function CashierPage() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
-  const [activeTab, setActiveTab] = useState<WorkerReservationStatus>("BOOKED");
+  const [activeTab, setActiveTab] = useState("booked");
   const [selectedRes, setSelectedRes] = useState<CashierReservation | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+
+  const [showWalkin, setShowWalkin] = useState(false);
+  const [walkinServices, setWalkinServices] = useState<Set<string>>(new Set());
+  const [walkinCapster, setWalkinCapster] = useState("");
+  const [walkinSaving, setWalkinSaving] = useState(false);
+
+  const [selectedWalkinDate, setSelectedWalkinDate] = useState(toISODate(new Date()));
+  const [walkinSelectedTime, setWalkinSelectedTime] = useState<string | null>(null);
 
   const { data, loading, error, refetch } = useApiPath<{ data: CashierReservationsResponse }>(
     "/api/cashier/reservations",
@@ -52,16 +64,16 @@ export default function CashierPage() {
   const paid = (res: CashierReservation) => res.payment_status === "SETTLEMENT";
 
   useEffect(() => {
-    document.body.style.overflow = selectedRes ? "hidden" : "";
+    document.body.style.overflow = selectedRes || showWalkin ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [selectedRes]);
+  }, [selectedRes, showWalkin]);
 
-  const filteredList = useMemo(
-    () => reservations.filter((res) => res.reservation_status === activeTab),
-    [reservations, activeTab],
-  );
+  const filteredList = useMemo(() => {
+    if (activeTab === "walkin") return reservations.filter(isWalkIn);
+    return reservations.filter((res) => res.reservation_status === activeTab && !isWalkIn(res));
+  }, [reservations, activeTab]);
 
   const calendarReservations = useMemo(() => reservations, [reservations]);
 
@@ -95,31 +107,119 @@ export default function CashierPage() {
     setSelectedDate(toISODate(d));
   };
 
+  const todayStr = toISODate(new Date());
+
+  const { data: serviceData } = useApiPath<{ data: { services: { service_id: string; name: string; price: string; duration_minutes: number }[] } }>("/api/admin/services");
+  const allServices = serviceData?.data.services ?? [];
+  const { data: staffData } = useApiPath<{ data: { staff: { user_id: string; name: string; role: string }[] } }>("/api/admin/staff");
+  const staffList = staffData?.data.staff ?? [];
+
+  const toggleWalkinService = (id: string) => {
+    setWalkinServices((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const { data: walkinMonthData } = useApiPath<{ data: { available_dates: string[] } }>(
+    "/api/availability/month",
+    { worker_id: walkinCapster || undefined, year: selectedWalkinDate.slice(0, 4), month: selectedWalkinDate.slice(5, 7) },
+  );
+  const walkinAvailableDates = walkinMonthData?.data.available_dates ?? [];
+
+  const { data: walkinDayData } = useApiPath<{ data: { slots: { time: string; available: boolean }[] } }>(
+    "/api/availability/day",
+    { worker_id: walkinCapster || undefined, date: selectedWalkinDate },
+  );
+  const walkinSlots = (walkinCapster && selectedWalkinDate) ? (walkinDayData?.data?.slots ?? []) : [];
+
+  const walkinSelectedServices = allServices.filter((svc) => walkinServices.has(svc.service_id));
+  const walkinTotalDuration = walkinSelectedServices.reduce((sum, svc) => sum + svc.duration_minutes, 0);
+  const walkinSlotsNeeded = Math.max(1, Math.ceil(walkinTotalDuration / 15));
+
+  const walkinSelectedIndex = walkinSelectedTime
+    ? walkinSlots.findIndex((s) => s.time === walkinSelectedTime)
+    : -1;
+
+  const canWalkinStartAt = (index: number) => {
+    if (index + walkinSlotsNeeded > walkinSlots.length) return false;
+    for (let i = index; i < index + walkinSlotsNeeded; i++) {
+      if (!walkinSlots[i].available) return false;
+    }
+    return true;
+  };
+
+  const walkinReservationEnd = walkinSelectedTime
+    ? (() => {
+        const [hh, mm] = walkinSelectedTime.split(":").map(Number);
+        const total = hh * 60 + mm + walkinTotalDuration;
+        return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+      })()
+    : null;
+
+  const canSubmitWalkin = walkinSelectedTime !== null && walkinServices.size > 0 && walkinCapster;
+
+  const handleWalkinSubmit = async () => {
+    if (!canSubmitWalkin || walkinSelectedTime === null) return;
+    setWalkinSaving(true);
+    try {
+      await api("/api/cashier/walkin", {
+        method: "POST",
+        body: {
+          service_ids: Array.from(walkinServices),
+          capster_id: walkinCapster,
+          booking_date: selectedWalkinDate,
+          start_time: walkinSelectedTime,
+        },
+      });
+      setShowWalkin(false);
+      setWalkinServices(new Set());
+      setWalkinCapster("");
+      setWalkinSelectedTime(null);
+      setActiveTab("walkin");
+      refetch();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Gagal membuat walk-in");
+    } finally {
+      setWalkinSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col pb-20">
       <div className="sticky top-16 z-40 border-b border-line bg-paper/95 px-5 py-4 backdrop-blur-sm">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-[20px] font-bold text-ink">Cashier</h1>
 
-          <div className="flex items-center rounded-lg border border-line bg-mist p-1">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-[12px] font-bold transition",
-                viewMode === "list" ? "bg-paper text-ink shadow-sm" : "text-graphite",
-              )}
+              onClick={() => setShowWalkin(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-ink px-3.5 py-2 text-[12px] font-bold text-paper transition active:scale-95"
             >
-              List
+              <Icon name="plus" className="h-4 w-4" />
+              Walk In
             </button>
-            <button
-              onClick={() => setViewMode("calendar")}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-[12px] font-bold transition",
-                viewMode === "calendar" ? "bg-paper text-ink shadow-sm" : "text-graphite",
-              )}
-            >
-              Calendar
-            </button>
+            <div className="flex items-center rounded-lg border border-line bg-mist p-1">
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-[12px] font-bold transition",
+                  viewMode === "list" ? "bg-paper text-ink shadow-sm" : "text-graphite",
+                )}
+              >
+                List
+              </button>
+              <button
+                onClick={() => setViewMode("calendar")}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-[12px] font-bold transition",
+                  viewMode === "calendar" ? "bg-paper text-ink shadow-sm" : "text-graphite",
+                )}
+              >
+                Calendar
+              </button>
+            </div>
           </div>
         </div>
 
@@ -428,6 +528,158 @@ export default function CashierPage() {
                 )}
                 <SecondaryButton onClick={() => setSelectedRes(null)}>Close</SecondaryButton>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showWalkin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="animate-fade-in absolute inset-0 bg-black/50" onClick={() => setShowWalkin(false)} />
+          <div className="animate-fade-in relative flex max-h-[85dvh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-paper shadow-xl">
+            <div className="no-scrollbar flex-1 overflow-y-auto px-6 pt-6 pb-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[22px] font-bold text-ink">Walk In</h2>
+                <button onClick={() => setShowWalkin(false)} className="text-gray-400 hover:text-gray-600">
+                  <Icon name="close" className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="mt-1 text-[13px] text-graphite">Pilih layanan, capster, dan waktu.</p>
+
+              <div className="mt-5 space-y-2">
+                <div className="text-[12px] font-bold text-ink uppercase tracking-wider">Pilih Layanan</div>
+                <div className="max-h-40 overflow-y-auto space-y-1.5">
+                  {allServices.length === 0 && <p className="text-xs text-gray-400">Memuat layanan...</p>}
+                  {allServices.map((svc) => (
+                    <button
+                      key={svc.service_id}
+                      type="button"
+                      onClick={() => toggleWalkinService(svc.service_id)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-[13px] transition",
+                        walkinServices.has(svc.service_id)
+                          ? "border-ink bg-mist font-bold text-ink"
+                          : "border-line bg-paper text-graphite hover:bg-gray-50",
+                      )}
+                    >
+                      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition", walkinServices.has(svc.service_id) ? "border-ink bg-ink" : "border-gray-300")}>
+                        {walkinServices.has(svc.service_id) && <Icon name="check" className="h-3 w-3 text-paper" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-ink">{svc.name}</div>
+                        <div className="text-[11px] text-gray-400">{formatPrice(Number(svc.price))} · {formatDuration(svc.duration_minutes)}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-1">
+                <div className="text-[12px] font-bold text-ink uppercase tracking-wider">Capster</div>
+                <select
+                  value={walkinCapster}
+                  onChange={(e) => { setWalkinCapster(e.target.value); setWalkinSelectedTime(null); }}
+                  className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-[13px] text-ink outline-none focus:border-ink"
+                >
+                  <option value="">Pilih capster</option>
+                  {staffList.filter((s) => s.role === "CAPSTER").map((s) => (
+                    <option key={s.user_id} value={s.user_id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-4 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="text-[12px] font-bold text-ink uppercase tracking-wider">Tanggal</div>
+                  {walkinAvailableDates.length > 0 && (
+                    <div className="flex gap-1">
+                      {walkinAvailableDates.slice(0, 5).map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setSelectedWalkinDate(d)}
+                          className={cn(
+                            "rounded-md px-2 py-1 text-[10px] font-semibold transition",
+                            selectedWalkinDate === d ? "bg-ink text-paper" : "bg-mist text-graphite hover:bg-gray-200",
+                          )}
+                        >
+                          {new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="date"
+                  value={selectedWalkinDate}
+                  min={todayStr}
+                  onChange={(e) => setSelectedWalkinDate(e.target.value)}
+                  className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-[13px] text-ink outline-none focus:border-ink"
+                />
+              </div>
+
+              {walkinCapster && selectedWalkinDate && (
+                <div className="mt-4 space-y-2">
+                  <div className="text-[12px] font-bold text-ink uppercase tracking-wider">Pilih Waktu</div>
+                  {walkinSlots.length === 0 ? (
+                    <p className="text-xs text-gray-400">Memuat jadwal...</p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-3 gap-2">
+                        {walkinSlots.map((slot, index) => {
+                          const inBlock = walkinSelectedIndex >= 0 && index >= walkinSelectedIndex && index < walkinSelectedIndex + walkinSlotsNeeded;
+                          const isStart = walkinSelectedTime === slot.time;
+                          const disabled = !slot.available || !canWalkinStartAt(index);
+                          return (
+                            <button
+                              key={slot.time}
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => setWalkinSelectedTime(slot.time)}
+                              className={cn(
+                                "relative rounded-lg py-2 text-[13px] font-semibold transition active:scale-95",
+                                inBlock
+                                  ? "bg-ink text-paper"
+                                  : disabled
+                                    ? "bg-fog text-smoke cursor-not-allowed"
+                                    : "border border-line bg-paper text-ink hover:bg-mist",
+                              )}
+                            >
+                              {slot.time}
+                              {isStart && (
+                                <span className="absolute -top-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-ink" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {walkinReservationEnd && (
+                        <div className="rounded-lg border border-line bg-mist px-3 py-2 text-[12px] text-graphite">
+                          Sesi dari <strong className="text-ink">{walkinSelectedTime}</strong> sampai <strong className="text-ink">{walkinReservationEnd}</strong> ({formatDuration(walkinTotalDuration)})
+                        </div>
+                      )}
+                      {!walkinSelectedTime && walkinTotalDuration > 0 && (
+                        <p className="text-[11px] text-gray-400 italic">Klik jam mulai — blok {formatDuration(walkinTotalDuration)} akan ditampilkan.</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {walkinServices.size === 0 && (
+                <p className="mt-2 text-[11px] text-gray-400">Pilih minimal satu layanan.</p>
+              )}
+
+              <button
+                type="button"
+                disabled={!canSubmitWalkin || walkinSaving}
+                onClick={handleWalkinSubmit}
+                className={cn(
+                  "mt-5 w-full rounded-xl bg-ink py-3 text-[14px] font-bold text-paper transition active:scale-95",
+                  (!canSubmitWalkin || walkinSaving) && "cursor-not-allowed opacity-40",
+                )}
+              >
+                {walkinSaving ? "Membuat..." : "Buat Walk In"}
+              </button>
             </div>
           </div>
         </div>
