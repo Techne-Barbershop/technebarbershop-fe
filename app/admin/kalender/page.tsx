@@ -88,7 +88,7 @@ export default function KalenderPage() {
     }
   };
 
-  const HOUR_HEIGHT = 80;
+  const HOUR_HEIGHT = 140;
 
   return (
     <div className="flex flex-col gap-6">
@@ -221,9 +221,10 @@ export default function KalenderPage() {
                             )}
                             style={{ top, height }}
                           >
-                            <div className="truncate text-[11px] font-bold">{res.customer_id}</div>
+                            <div className="truncate text-[11px] font-bold">{res.customer_name}</div>
                             {height >= 40 && (
                               <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">
+                              
                                 {res.start_time} • {res.service_ids?.length || 0} layanan
                               </div>
                             )}

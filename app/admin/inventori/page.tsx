@@ -137,14 +137,13 @@ export default function InventoriPage() {
         {!loading && !error && (
           <div className="overflow-x-auto pb-32">
             <table className="w-full min-w-[720px] text-sm" ref={dropdownRef}>
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-bold uppercase text-gray-500">
-                  <th className="px-5 py-3 whitespace-nowrap">ID Produk</th>
-                  <th className="px-5 py-3 whitespace-nowrap"></th>
-                  <th className="px-5 py-3 whitespace-nowrap">Nama Produk</th>
-                  <th className="px-5 py-3 text-right whitespace-nowrap">Harga</th>
-                  <th className="px-5 py-3 text-right whitespace-nowrap">Kuantitas</th>
-                  <th className="px-5 py-3 text-center whitespace-nowrap">Aksi</th>
+              <thead className="border-b border-gray-100 bg-gray-50/50">
+                <tr className="text-left text-xs font-bold uppercase text-gray-500">
+                  <th className="px-5 py-4 whitespace-nowrap">PRODUK</th>
+                  <th className="px-5 py-4 whitespace-nowrap">ID PRODUK</th>
+                  <th className="px-5 py-4 text-right whitespace-nowrap">HARGA</th>
+                  <th className="px-5 py-4 text-right whitespace-nowrap">KUANTITAS</th>
+                  <th className="px-5 py-4 text-center whitespace-nowrap">AKSI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -155,17 +154,19 @@ export default function InventoriPage() {
                 )}
                 {products.map((item) => (
                   <tr key={item.product_id} className="hover:bg-gray-50/50">
-                    <td className="px-5 py-3 font-medium text-gray-600 whitespace-nowrap">{item.product_id}</td>
                     <td className="px-5 py-3 whitespace-nowrap">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <Icon name="image" className="h-5 w-5 text-gray-400" />
-                        )}
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 border border-gray-200">
+                          {item.image_url ? (
+                            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <Icon name="image" className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="font-bold text-black">{item.name}</div>
                       </div>
                     </td>
-                    <td className="px-5 py-3 font-semibold text-black whitespace-nowrap">{item.name}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">{item.product_id}</td>
                     <td className="px-5 py-3 text-right font-medium text-black whitespace-nowrap">{formatRupiah(item.price)}</td>
                     <td className="px-5 py-3 text-right font-medium text-gray-600 whitespace-nowrap">{item.current_stock}</td>
                     <td className="px-5 py-3 text-center relative whitespace-nowrap">

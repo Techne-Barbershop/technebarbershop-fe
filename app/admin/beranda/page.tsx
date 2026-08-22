@@ -25,16 +25,50 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function BerandaPage() {
   const { data: statsData, loading, error } = useApiPath<{ data: DashboardStats }>("/api/admin/dashboard");
-  const [transactions, setTransactions] = useState<{ transaction_id: string; customer_id: string; booking_date: string; total_price: string; start_time: string }[]>([]);
+  const [transactions, setTransactions] = useState<{ transaction_id: string; customer_id: string; customer_name: string; booking_date: string; total_price: string; start_time: string }[]>([]);
   const [bookings, setBookings] = useState<Reservation[]>([]);
+  const [chartData, setChartData] = useState<{ date: string; label: string; revenue: number }[]>([]);
 
   const stats = statsData?.data;
 
   useEffect(() => {
     const today = todayISO();
-    api<{ data: { transactions: { transaction_id: string; customer_id: string; booking_date: string; total_price: string; start_time: string }[] } }>("/api/admin/transactions", { query: { start_date: today, end_date: today, page: 1, page_size: 5 } })
-      .then((p) => setTransactions(p.data.transactions))
-      .catch(() => setTransactions([]));
+
+    // Generate last 7 days
+    const last7Days: { date: string; label: string; revenue: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      last7Days.push({ date: iso, label, revenue: 0 });
+    }
+    const startDate = last7Days[0].date;
+
+    api<{ data: { transactions: any[] } }>("/api/admin/transactions", { query: { start_date: startDate, end_date: today, page: 1, page_size: 1000 } })
+      .then((p) => {
+        const txs = p.data.transactions || [];
+        
+        // Calculate chart data
+        const newChartData = [...last7Days];
+        for (const tx of txs) {
+          if (tx.status === "PAID" || tx.status === "COMPLETED") {
+            const dayIndex = newChartData.findIndex(d => d.date === tx.booking_date);
+            if (dayIndex !== -1) {
+              newChartData[dayIndex].revenue += Number(tx.total_price) || 0;
+            }
+          }
+        }
+        setChartData(newChartData);
+
+        // Filter only today's transactions for the table (limit to 5)
+        setTransactions(txs.filter(tx => tx.booking_date === today).slice(0, 5));
+      })
+      .catch(() => {
+        setTransactions([]);
+        setChartData(last7Days);
+      });
+
     api<{ data: { reservations: Reservation[] } }>("/api/admin/reservations", { query: { start_date: today, end_date: today } })
       .then((p) => setBookings(p.data.reservations))
       .catch(() => setBookings([]));
@@ -67,16 +101,55 @@ export default function BerandaPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-5 xl:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-black">Penjualan Mingguan</h2>
-            <span className="text-xs text-gray-400">Sen - Min</span>
+            <h2 className="text-base font-bold text-black">Pendapatan Mingguan</h2>
+            <span className="text-xs text-gray-400">7 Hari Terakhir</span>
           </div>
-          <div className="mt-6 flex h-48 items-end gap-2">
-            {[42, 58, 47, 72, 65, 88, 54, 76, 61, 82, 68, 90].map((height, index) => (
-              <div key={index} className="flex flex-1 flex-col items-center gap-2">
-                <div className="w-full rounded-t bg-gray-300" style={{ height: `${height}%` }} />
-                <span className="text-[10px] text-gray-400">{index + 1}</span>
+          <div className="mt-6 flex h-56 pb-6 w-full gap-3">
+            {/* Y-Axis */}
+            <div className="flex w-10 shrink-0 flex-col justify-between text-right text-[10px] font-medium text-gray-400">
+              <span>1.2Jt</span>
+              <span>1Jt</span>
+              <span>800k</span>
+              <span>600k</span>
+              <span>400k</span>
+              <span>200k</span>
+              <span>0</span>
+            </div>
+
+            {/* Bars */}
+            <div className="relative flex flex-1 items-end gap-2 border-b border-gray-200">
+              {/* Grid Lines */}
+              <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="h-0 w-full border-t border-dashed border-gray-100" />
+                ))}
               </div>
-            ))}
+
+              {chartData.map((data, index) => {
+                const heightPercentage = Math.min((data.revenue / 1200000) * 100, 100);
+                const fullDateLabel = new Date(data.date).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
+                return (
+                  <div key={index} className="group relative z-10 flex h-full flex-1 flex-col items-center justify-end">
+                    {/* Tooltip Popup */}
+                    <div className="pointer-events-none absolute -top-14 z-50 flex flex-col items-center opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="whitespace-nowrap rounded-lg bg-black px-3 py-2 text-center text-xs text-white shadow-xl">
+                        <div className="font-bold">{fullDateLabel}</div>
+                        <div className="mt-1 font-medium">{formatRupiah(data.revenue.toString())}</div>
+                      </div>
+                      <div className="h-0 w-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-black" />
+                    </div>
+
+                    <div
+                      className="w-full max-w-[32px] rounded-t bg-black transition-all group-hover:opacity-80 md:max-w-[40px]"
+                      style={{ height: `${heightPercentage}%` }}
+                    />
+                    <span className="absolute -bottom-6 whitespace-nowrap text-[10px] text-gray-400">
+                      {data.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -86,13 +159,13 @@ export default function BerandaPage() {
             {bookings.length === 0 && <p className="py-3 text-sm text-gray-400">Belum ada booking hari ini.</p>}
             {bookings.map((booking) => (
               <div key={booking.reservation_id} className="flex items-center gap-3 py-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600">
-                  {booking.customer_id.slice(-4)}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600 uppercase">
+                  {booking.customer_name ? booking.customer_name.charAt(0) : "?"}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-black">{booking.reservation_id}</div>
+                  <div className="truncate text-sm font-semibold text-black">{booking.customer_name || "Tanpa Nama"}</div>
                   <div className="truncate text-xs text-gray-500">
-                    {booking.capster_id} · {booking.start_time}
+                    {booking.reservation_id} · {booking.start_time}
                   </div>
                 </div>
                 <span className="rounded-full border border-gray-400 px-2.5 py-1 text-[10px] font-medium text-gray-600">
@@ -127,7 +200,7 @@ export default function BerandaPage() {
               {transactions.map((transaction) => (
                 <tr key={transaction.transaction_id} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-600">{transaction.transaction_id}</td>
-                  <td className="px-5 py-3 font-semibold text-black">{transaction.customer_id}</td>
+                  <td className="px-5 py-3 font-semibold text-black">{transaction.customer_name || transaction.customer_id}</td>
                   <td className="px-5 py-3 text-gray-600">{transaction.start_time}</td>
                   <td className="px-5 py-3 text-right font-semibold text-black">{formatRupiah(transaction.total_price)}</td>
                 </tr>

@@ -380,11 +380,11 @@ export default function StafPage() {
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-gray-100 bg-gray-50/50">
                     <tr>
-                      <th className="px-5 py-4 font-semibold text-gray-500">Staf</th>
-                      <th className="px-5 py-4 font-semibold text-gray-500">ID User</th>
-                      <th className="px-5 py-4 font-semibold text-gray-500">Email</th>
-                      <th className="px-5 py-4 font-semibold text-gray-500">Nomor HP</th>
-                      <th className="px-5 py-4 font-semibold text-gray-500">Role</th>
+                      <th className="px-5 py-4 font-semibold text-gray-500">STAF</th>
+                      <th className="px-5 py-4 font-semibold text-gray-500">ID STAF</th>
+                      <th className="px-5 py-4 font-semibold text-gray-500">EMAIL</th>
+                      <th className="px-5 py-4 font-semibold text-gray-500">NO. TELEPON</th>
+                      <th className="px-5 py-4 font-semibold text-gray-500">ROLE</th>
                       <th className="px-5 py-4 font-semibold text-gray-500"></th>
                     </tr>
                   </thead>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Icon } from "@/components/icons";
 import SummaryCard from "@/components/admin/SummaryCard";
 import TablePagination from "@/components/admin/TablePagination";
@@ -29,7 +28,7 @@ function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-export default function ItemSalesPage() {
+export default function ItemSalesView() {
   const [location, setLocation] = useState("Techné a Barbershop");
   const [staffId, setStaffId] = useState("");
   const [dateRange, setDateRange] = useState({ start: daysAgo(7), end: todayISO() });
@@ -103,18 +102,7 @@ export default function ItemSalesPage() {
     : [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin"
-          aria-label="Kembali"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-50"
-        >
-          <Icon name="arrowLeft" className="h-5 w-5" />
-        </Link>
-        <h1 className="text-xl font-bold text-black">Penjualan berdasarkan item</h1>
-      </div>
-
+    <div className="space-y-6 mt-4">
       <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <select
