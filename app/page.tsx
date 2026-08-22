@@ -84,7 +84,7 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-8 flex flex-col gap-3">
-            {!loading && customer ? (
+            {!loading && customer && customer.name ? (
               <>
                 <button
                   type="button"
