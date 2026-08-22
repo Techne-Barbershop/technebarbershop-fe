@@ -10,6 +10,19 @@ import { useApiPath } from "@/lib/useApi";
 import type { Transaction, TransactionsResponse } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
 
+interface ProductSale {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  total_price: string;
+  payment_method: string;
+  payment_status: string;
+  cashier_id: string;
+  cashier_name: string;
+  sale_date: string;
+}
+
 function formatRupiah(value: string | number): string {
   const num = Number(value);
   if (Number.isNaN(num)) return "Rp 0";
@@ -23,8 +36,8 @@ const STATUS_BADGE: Record<string, string> = {
   CANCELLED: "bg-red-50 text-red-700",
 };
 
-type TabType = "Ringkasan Penjualan" | "Transaksi" | "Transaksi per Service";
-const TABS: TabType[] = ["Ringkasan Penjualan", "Transaksi", "Transaksi per Service"];
+type TabType = "Ringkasan Penjualan" | "Transaksi" | "Transaksi per Service" | "Penjualan Produk";
+const TABS: TabType[] = ["Ringkasan Penjualan", "Transaksi", "Transaksi per Service", "Penjualan Produk"];
 
 export default function PenjualanPage() {
   const [activeTab, setActiveTab] = useState<TabType>("Ringkasan Penjualan");
@@ -43,6 +56,9 @@ export default function PenjualanPage() {
   });
 
   const transactions = data?.data.transactions ?? [];
+
+  const { data: productSalesData } = useApiPath<{ data: { sales: ProductSale[] } }>("/api/admin/product-sales");
+  const productSales = productSalesData?.data.sales ?? [];
 
   const openDetail = async (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -263,6 +279,54 @@ export default function PenjualanPage() {
             )}
           </div>
         </>
+      )}
+
+      {activeTab === "Penjualan Produk" && (
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <h2 className="text-base font-bold text-black">Penjualan Produk</h2>
+            <span className="text-sm text-gray-500">{productSales.length} transaksi</span>
+          </div>
+          <div className="overflow-x-auto pb-4">
+            <table className="w-full min-w-[1000px] text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-bold uppercase text-gray-500">
+                  <th className="px-5 py-3 whitespace-nowrap">ID</th>
+                  <th className="px-5 py-3 whitespace-nowrap">Produk</th>
+                  <th className="px-5 py-3 text-right whitespace-nowrap">Qty</th>
+                  <th className="px-5 py-3 text-right whitespace-nowrap">Total</th>
+                  <th className="px-5 py-3 whitespace-nowrap">Kasir</th>
+                  <th className="px-5 py-3 whitespace-nowrap">Metode</th>
+                  <th className="px-5 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-5 py-3 whitespace-nowrap">Waktu</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {productSales.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-6 text-center text-sm text-gray-400">Belum ada penjualan produk.</td>
+                  </tr>
+                )}
+                {productSales.map((sale) => (
+                  <tr key={sale.id} className="transition hover:bg-gray-50/50">
+                    <td className="px-5 py-3 font-medium text-gray-600 whitespace-nowrap">{sale.id}</td>
+                    <td className="px-5 py-3 font-semibold text-black whitespace-nowrap">{sale.product_name}</td>
+                    <td className="px-5 py-3 text-right text-gray-600 whitespace-nowrap">{sale.quantity}</td>
+                    <td className="px-5 py-3 text-right font-bold text-black whitespace-nowrap">{formatRupiah(sale.total_price)}</td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{sale.cashier_name}</td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{sale.payment_method}</td>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", sale.payment_status === "SETTLEMENT" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700")}>
+                        {sale.payment_status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{sale.sale_date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       <Modal isOpen={!!selectedTransaction} onClose={() => setSelectedTransaction(null)} title="Detail Transaksi">
