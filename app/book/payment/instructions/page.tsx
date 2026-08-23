@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
@@ -9,101 +9,73 @@ import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
 import { STORE } from "@/lib/constants";
-import { formatDateID } from "@/lib/utils/availability";
 import { formatDuration, formatPrice, sumDurations, sumPrices } from "@/lib/utils/format";
-import type { BookingState } from "@/lib/types";
+import { QRCodeSVG } from "qrcode.react";
 
 type Status = "idle" | "submitting" | "success";
-
-function buildPaymentPayload(state: BookingState, totalPrice: number) {
-  return {
-    bookingId: `HN-${Date.now()}`,
-    store: { name: STORE.name, location: STORE.location },
-    services: state.services.map((service) => ({
-      id: service.service_id,
-      title: service.name,
-      durationMinutes: service.duration_minutes,
-      price: parseFloat(service.price),
-    })),
-    artist: state.artist
-      ? { id: state.artist.id, name: state.artist.name }
-      : null,
-    schedule: {
-      date: state.date,
-      time: state.time,
-      formattedDate: state.date ? formatDateID(state.date) : null,
-    },
-    customer: state.user
-      ? {
-          name: state.user.name,
-          phone: state.user.phone,
-          email: state.user.email,
-        }
-      : null,
-    total: totalPrice,
-    payment: {
-      method: state.paymentMethod?.id ?? null,
-      channel: state.paymentMethod?.name ?? null,
-      status: "pending",
-    },
-  };
-}
-
-function QrFinder({ x, y }: { x: number; y: number }) {
-  return (
-    <>
-      <rect x={x} y={y} width={7} height={7} fill="#ffffff" />
-      <rect x={x + 1} y={y + 1} width={5} height={5} fill="#000000" />
-      <rect x={x + 2} y={y + 2} width={3} height={3} fill="#ffffff" />
-    </>
-  );
-}
-
-function QrPattern({ className }: { className?: string }) {
-  const size = 21;
-  const modules: { x: number; y: number }[] = [];
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const inFinder =
-        (x < 7 && y < 7) ||
-        (x >= size - 7 && y < 7) ||
-        (x < 7 && y >= size - 7);
-      if (inFinder) continue;
-      const value =
-        Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
-      if (value > 0.5) modules.push({ x, y });
-    }
-  }
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} className={className} aria-hidden="true">
-      <rect width={size} height={size} fill="#ffffff" />
-      {modules.map((m) => (
-        <rect
-          key={`${m.x}-${m.y}`}
-          x={m.x}
-          y={m.y}
-          width={1}
-          height={1}
-          fill="#000000"
-        />
-      ))}
-      <QrFinder x={0} y={0} />
-      <QrFinder x={size - 7} y={0} />
-      <QrFinder x={0} y={size - 7} />
-    </svg>
-  );
-}
 
 export default function PaymentInstructionsPage() {
   const router = useRouter();
   const { state, reset, dispatch } = useBooking();
   const [status, setStatus] = useState<Status>("idle");
   const [copied, setCopied] = useState(false);
+  const [qrString, setQrString] = useState<string | null>(null);
 
   const method = state.paymentMethod;
   const services = state.services;
   const totalPrice = sumPrices(services);
   const totalDuration = sumDurations(services);
+  const isQris = method?.id === "qris";
+
+  useEffect(() => {
+    if (!state.reservationId || !isQris) return;
+
+    let isMounted = true;
+    const fetchQR = async () => {
+      try {
+        const token = localStorage.getItem("customer_token");
+        const res = await fetch(`http://localhost:8080/api/reservations/${state.reservationId}/payment/qris`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          }
+        });
+        if (!res.ok) throw new Error("Failed to load QR");
+        const data = await res.json();
+        if (isMounted) setQrString(data.data.qr_string);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchQR();
+    
+    // Polling interval
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("customer_token");
+        const res = await fetch(`http://localhost:8080/api/reservations/${state.reservationId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const meData = await res.json();
+        
+        // Cek jika response sukses dan status berubah
+        if (meData?.data?.status) {
+          if (meData.data.status === "BOOKED" || meData.data.status === "COMPLETED") {
+            setStatus("success");
+          }
+        }
+      } catch (err) {
+        console.error("Polling error", err);
+      }
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [state.reservationId, isQris]);
 
   const handleCopy = async () => {
     if (!method) return;
@@ -141,32 +113,6 @@ export default function PaymentInstructionsPage() {
     }
   };
 
-  const handleComplete = async () => {
-    if (status !== "idle") return;
-    setStatus("submitting");
-
-    try {
-      const token = localStorage.getItem("customer_token");
-      const res = await fetch(`http://localhost:8080/api/reservations/${state.reservationId}/pay`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to process payment");
-      }
-
-      setStatus("success");
-    } catch (error) {
-      console.error(error);
-      alert("Something went wrong when submitting booking.");
-      setStatus("idle");
-    }
-  };
-
   const handleDone = () => {
     reset();
     router.push("/");
@@ -184,8 +130,6 @@ export default function PaymentInstructionsPage() {
       </div>
     );
   }
-
-  const isQris = method.id === "qris";
 
   return (
     <div>
@@ -216,8 +160,12 @@ export default function PaymentInstructionsPage() {
 
           {isQris ? (
             <div className="mt-5 flex flex-col items-center">
-              <div className="rounded-2xl border-2 border-ink p-3">
-                <QrPattern className="h-52 w-52" />
+              <div className="rounded-2xl border-2 border-ink p-3 bg-white flex items-center justify-center h-52 w-52">
+                {qrString ? (
+                  <QRCodeSVG value={qrString} size={180} />
+                ) : (
+                  <span className="text-graphite text-xs animate-pulse">Memuat QR...</span>
+                )}
               </div>
               <p className="mt-3 text-[11.5px] text-graphite">
                 {method.detail.value}
@@ -281,13 +229,6 @@ export default function PaymentInstructionsPage() {
 
       <BottomBar>
         <div className="flex flex-col gap-3 w-full">
-          <PrimaryButton
-            onClick={handleComplete}
-            disabled={status !== "idle"}
-            className={status !== "idle" ? "cursor-wait" : undefined}
-          >
-            {status === "submitting" ? "Processing..." : "Complete Payment"}
-          </PrimaryButton>
           <button
             onClick={handleCancel}
             disabled={cancelling || status !== "idle"}
@@ -324,7 +265,7 @@ export default function PaymentInstructionsPage() {
                   Booking Confirmed!
                 </h2>
                 <p className="mt-2 text-[13px] leading-relaxed text-graphite">
-                  Your payment was received (simulated). We&apos;ve sent your
+                  Your payment was received. We&apos;ve sent your
                   booking details to {state.user?.email ?? "your email"}. See
                   you at {STORE.name}!
                 </p>
