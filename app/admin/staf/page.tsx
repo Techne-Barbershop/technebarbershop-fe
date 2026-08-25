@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import Avatar from "@/components/admin/Avatar";
 import { Icon } from "@/components/icons";
 import { useApiPath } from "@/lib/useApi";
@@ -834,6 +835,11 @@ export default function StafPage() {
                 <button onClick={() => { setDropdownConfig(null); openEditStaff(member); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-black">
                   <Icon name="edit" className="h-4 w-4" /> Edit
                 </button>
+                {member.role === 'CAPSTER' && (
+                  <Link href={`/admin/staf/${member.user_id}/performa`} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-black">
+                    <Icon name="chart" className="h-4 w-4" /> Performa
+                  </Link>
+                )}
                 <button onClick={() => { setDropdownConfig(null); handleDeleteStaff(member.user_id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50">
                   <Icon name="trash" className="h-4 w-4" /> Hapus
                 </button>

@@ -6,6 +6,7 @@ import type { DashboardStats } from "@/lib/types/admin";
 import { api } from "@/lib/api";
 import { useEffect, useState } from "react";
 import type { Reservation } from "@/lib/types/admin";
+import { addMinutes } from "@/lib/utils/format";
 
 function formatRupiah(value: string): string {
   const num = Number(value);
@@ -17,15 +18,32 @@ function todayISO(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function formatDateTime(dateString: string) {
+  const date = new Date(dateString);
+
+  return `${date.toLocaleDateString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })}, ${date.toLocaleTimeString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })}`;
+}
+
 const STATUS_LABELS: Record<string, string> = {
-  BOOKED: "Terjadwal",
-  COMPLETED: "Selesai",
-  CANCELLED: "Dibatalkan",
+  BOOKED: "BOOKED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
 };
 
 export default function BerandaPage() {
   const { data: statsData, loading, error } = useApiPath<{ data: DashboardStats }>("/api/admin/dashboard");
-  const [transactions, setTransactions] = useState<{ transaction_id: string; customer_id: string; customer_name: string; booking_date: string; total_price: string; start_time: string }[]>([]);
+  const [transactions, setTransactions] = useState<{ transaction_id: string; customer_id: string; customer_name: string; booking_date: string; total_price: string; start_time: string; total_duration_minutes: number; created_at: string; updated_at: string; status: string; }[]>([]);
   const [bookings, setBookings] = useState<Reservation[]>([]);
   const [chartData, setChartData] = useState<{ date: string; label: string; revenue: number }[]>([]);
 
@@ -52,8 +70,9 @@ export default function BerandaPage() {
         // Calculate chart data
         const newChartData = [...last7Days];
         for (const tx of txs) {
-          if (tx.status === "PAID" || tx.status === "COMPLETED") {
-            const dayIndex = newChartData.findIndex(d => d.date === tx.booking_date);
+          if ((tx.status === "PAID" || tx.status === "COMPLETED") && tx.updated_at) {
+            const txDate = tx.updated_at.split("T")[0];
+            const dayIndex = newChartData.findIndex(d => d.date === txDate);
             if (dayIndex !== -1) {
               newChartData[dayIndex].revenue += Number(tx.total_price) || 0;
             }
@@ -61,8 +80,9 @@ export default function BerandaPage() {
         }
         setChartData(newChartData);
 
-        // Filter only today's transactions for the table (limit to 5)
-        setTransactions(txs.filter(tx => tx.booking_date === today).slice(0, 5));
+        // We no longer filter transactions for the bookings table, 
+        // we store all of them, and then render them separately.
+        setTransactions(txs);
       })
       .catch(() => {
         setTransactions([]);
@@ -70,7 +90,7 @@ export default function BerandaPage() {
       });
 
     api<{ data: { reservations: Reservation[] } }>("/api/admin/reservations", { query: { start_date: today, end_date: today } })
-      .then((p) => setBookings(p.data.reservations))
+      .then((p) => setBookings(p.data?.reservations || []))
       .catch(() => setBookings([]));
   }, []);
 
@@ -80,7 +100,7 @@ export default function BerandaPage() {
         {[
           { label: "Total Pelanggan", value: stats ? stats.total_customers.toLocaleString("id-ID") : "0", icon: "users" },
           { label: "Penjualan Bulan Ini", value: stats ? formatRupiah(stats.revenue_month) : "Rp 0", icon: "chart" },
-          { label: "Kunjungan Hari Ini", value: stats ? stats.visits_today.toLocaleString("id-ID") : "0", icon: "calendar" },
+          { label: "Kunjungan Hari Ini", value: stats ? stats.reservations_today.toLocaleString("id-ID") : "0", icon: "calendar" },
           { label: "Staf Aktif", value: stats ? stats.active_staff.toLocaleString("id-ID") : "0", icon: "user" },
         ].map((stat) => (
           <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-5">
@@ -179,30 +199,88 @@ export default function BerandaPage() {
 
       <div className="rounded-lg border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <h2 className="text-base font-bold text-black">Reservasi Hari Ini</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase">
+                <th className="px-5 py-3 font-semibold">ID Reservasi</th>
+                <th className="px-5 py-3 font-semibold">Customer</th>
+                <th className="px-5 py-3 font-semibold">Capster</th>
+                <th className="px-5 py-3 font-semibold">Jam Reservasi</th>
+                <th className="px-5 py-3 font-semibold">Tanggal</th>
+                <th className="px-5 py-3 font-semibold text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {bookings.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-3 text-sm text-gray-400">Belum ada reservasi hari ini.</td>
+                </tr>
+              )}
+              {bookings.map((booking) => (
+                <tr key={booking.reservation_id} className="hover:bg-gray-50">
+                  <td className="px-5 py-3 font-medium text-gray-600">{booking.reservation_id}</td>
+                  <td className="px-5 py-3 font-semibold text-black">{booking.customer_name || booking.customer_id}</td>
+                  <td className="px-5 py-3 font-semibold text-black">{booking.capster_name || booking.capster_id}</td>
+                  <td className="px-5 py-3 text-gray-600">{booking.start_time} - {addMinutes(booking.start_time, booking.duration_minutes || 0)}</td>
+                  <td className="px-5 py-3 text-gray-600">{booking.booking_date}</td>
+                  <td className="px-5 py-3 text-center font-semibold text-black">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium ${
+                      booking.status === "COMPLETED" ? "bg-green-100 text-green-700" :
+                      booking.status === "BOOKED" ? "bg-blue-100 text-blue-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {STATUS_LABELS[booking.status] || booking.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Transaksi Hari Ini */}
+      <div className="rounded-lg border border-gray-200 bg-white">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <h2 className="text-base font-bold text-black">Transaksi Hari Ini</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase">
-                <th className="px-5 py-3 font-semibold">ID</th>
+                <th className="px-5 py-3 font-semibold">ID Transaksi</th>
                 <th className="px-5 py-3 font-semibold">Customer</th>
-                <th className="px-5 py-3 font-semibold">Jam</th>
+                <th className="px-5 py-3 font-semibold">Waktu</th>
                 <th className="px-5 py-3 text-right font-semibold">Total</th>
+                <th className="px-5 py-3 text-center font-semibold">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.length === 0 && (
+              {transactions.filter(tx => tx.updated_at && tx.updated_at.split("T")[0] === todayISO()).length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-3 text-sm text-gray-400">Belum ada transaksi hari ini.</td>
+                  <td colSpan={4} className="px-5 py-3 text-sm text-gray-400">Belum ada transaksi lunas hari ini.</td>
                 </tr>
               )}
-              {transactions.map((transaction) => (
+              {transactions
+                .filter(tx => tx.updated_at && tx.updated_at.split("T")[0] === todayISO())
+                .map((transaction) => (
                 <tr key={transaction.transaction_id} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-600">{transaction.transaction_id}</td>
                   <td className="px-5 py-3 font-semibold text-black">{transaction.customer_name || transaction.customer_id}</td>
-                  <td className="px-5 py-3 text-gray-600">{transaction.start_time}</td>
+                  <td className="px-5 py-3 text-black">{formatDateTime(transaction.updated_at)}</td>
                   <td className="px-5 py-3 text-right font-semibold text-black">{formatRupiah(transaction.total_price)}</td>
+                  <td className="px-3 py-3 text-center font-semibold text-black">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-medium ${
+                      transaction.status === "PAID" || transaction.status === "COMPLETED" ? "bg-green-100 text-green-700" :
+                      transaction.status === "PENDING" ? "bg-yellow-100 text-yellow-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {STATUS_LABELS[transaction.status] || transaction.status}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -210,7 +210,8 @@ export default function KalenderPage() {
                       .filter((res) => res.booking_date === colDate)
                       .map((res) => {
                         const top = (getMinutesSince10(res.start_time) / 60) * HOUR_HEIGHT;
-                        const height = (res.duration_minutes / 60) * HOUR_HEIGHT;
+                        const displayDuration = Math.max(res.duration_minutes, 15);
+                        const height = (displayDuration / 60) * HOUR_HEIGHT;
                         return (
                           <div
                             key={res.reservation_id}

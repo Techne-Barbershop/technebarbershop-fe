@@ -1,32 +1,53 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
-export function proxy(request: NextRequest) {
-  // 1. Ambil cookie yang disimpan saat login
-  // (Untuk sementara kita cek cookie 'role', nanti kita ganti dengan JWT)
-  const role = request.cookies.get('role')?.value;
+// Secret key matching the Go backend.
+const secretKey = new TextEncoder().encode(process.env.JWT_SECRET || 'rahasia123');
 
-  // 2. Cek apakah user mencoba masuk ke halaman /admin
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (role?.toUpperCase() !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+export async function proxy(request: NextRequest) {
+  // 1. Ambil cookie token
+  const token = request.cookies.get('token')?.value;
+
+  // Function to redirect to login
+  const redirectToLogin = () => NextResponse.redirect(new URL('/login', request.url));
+
+  // Jika tidak ada token sama sekali, tolak
+  if (!token) {
+    return redirectToLogin();
   }
 
-  if (request.nextUrl.pathname.startsWith('/worker')) {
-    if (role?.toUpperCase() !== 'CAPSTER' && role?.toUpperCase() !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-  }
+  try {
+    // 2. Verifikasi token JWT menggunakan jose (jalan di Edge Runtime)
+    const { payload } = await jwtVerify(token, secretKey);
+    const role = (payload.role as string)?.toUpperCase();
 
-  // Jika aman, persilakan masuk
-  return NextResponse.next();
+    // 3. Cek Role Based Access Control
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+      if (role !== 'ADMIN') {
+        return redirectToLogin();
+      }
+    }
+
+    if (request.nextUrl.pathname.startsWith('/worker')) {
+      if (role !== 'CAPSTER' && role !== 'ADMIN') {
+        return redirectToLogin();
+      }
+    }
+
+    // Jika aman, persilakan masuk
+    return NextResponse.next();
+  } catch (err) {
+    // Jika token tidak valid, kadaluarsa, atau rusak
+    console.error("JWT Verification failed:", err);
+    return redirectToLogin();
+  }
 }
 
-// Konfigurasi ini memberitahu Next.js URL mana saja yang harus dicegat satpam
+// Konfigurasi URL mana saja yang harus dicegat
 export const config = {
   matcher: [
-    '/admin/:path*', 
+    '/admin/:path*',
     '/worker/:path*'
   ],
 };

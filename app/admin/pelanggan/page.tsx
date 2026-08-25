@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Avatar from "@/components/admin/Avatar";
 import { Icon } from "@/components/icons";
 import { useApiPath } from "@/lib/useApi";
@@ -65,12 +66,13 @@ export default function PelangganPage() {
                   <th className="px-5 py-4">EMAIL</th>
                   <th className="px-5 py-4">NO. TELPON</th>
                   <th className="px-5 py-4">BERGABUNG</th>
+                  <th className="px-5 py-4 text-center">AKSI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {customers.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-6 text-center text-sm text-gray-400">Tidak ada pelanggan.</td>
+                    <td colSpan={6} className="px-5 py-6 text-center text-sm text-gray-400">Tidak ada pelanggan.</td>
                   </tr>
                 )}
                 {customers.map((customer) => (
@@ -85,6 +87,14 @@ export default function PelangganPage() {
                     <td className="px-5 py-3 text-gray-600">{customer.email || "-"}</td>
                     <td className="px-5 py-3 whitespace-nowrap text-gray-600">{customer.phone}</td>
                     <td className="px-5 py-3 whitespace-nowrap text-gray-600">{formatDate(customer.created_at)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <Link
+                        href={`/admin/pelanggan/${customer.customer_id}/detail`}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 hover:text-black"
+                      >
+                           Lihat Detail
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -122,7 +122,7 @@ export default function PenjualanPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { label: "Total Transaksi (filter)", value: transactions.length.toLocaleString("id-ID"), icon: "wallet" },
-              { label: "Total Pendapatan (filter)", value: formatRupiah(todayTotal), icon: "chart" },
+              { label: "Total Pendapatan (filter)", value: formatRupiah(todayTotal), icon: "dollar" },
             ].map((stat) => (
               <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-5">
                 <div className="flex items-center justify-between">
