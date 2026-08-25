@@ -22,7 +22,7 @@ export default function WalkinPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<{ data: { categories: Category[] } }>("/api/admin/categories")
+    api<{ data: { categories: Category[] } }>("/api/categories")
       .then((res) => { setCategories(res.data.categories || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);

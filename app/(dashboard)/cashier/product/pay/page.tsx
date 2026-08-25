@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { QRCodeCanvas } from "qrcode.react";
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { api } from "@/lib/api";
@@ -14,17 +15,24 @@ export default function ProductPayPage() {
   const router = useRouter();
   const params = useSearchParams();
   const itemsStr = params.get("items") ?? "";
-  const [submitting, setSubmitting] = useState(false);
 
-  const items = useMemo(() => {
+  const items = (() => {
     if (!itemsStr) return [];
     return itemsStr.split(",").map((entry) => {
       const [id, qtyStr] = entry.split(":");
       return { product_id: id, quantity: Number(qtyStr) };
     });
-  }, [itemsStr]);
+  })();
 
   const [products, setProducts] = useState<Record<string, Product>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  // QR state
+  const [qrBatchId, setQrBatchId] = useState("");
+  const [qrString, setQrString] = useState("");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     api<{ data: { products: Product[] } }>("/api/cashier/products")
@@ -38,7 +46,8 @@ export default function ProductPayPage() {
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
   const totalPrice = items.reduce((s, i) => s + i.quantity * Number(products[i.product_id]?.price ?? 0), 0);
 
-  const handleSubmit = async () => {
+  // --- Cash ---
+  const handleCash = async () => {
     setSubmitting(true);
     try {
       for (const item of items) {
@@ -53,6 +62,52 @@ export default function ProductPayPage() {
       setSubmitting(false);
     }
   };
+
+  // --- QRIS ---
+  const stopQrPolling = () => {
+    if (qrPollRef.current) {
+      clearInterval(qrPollRef.current);
+      qrPollRef.current = null;
+    }
+  };
+
+  const pollQrStatus = async (batchId: string) => {
+    try {
+      const resp = await api<{ data: { payment_status: string } }>(
+        `/api/cashier/products/sale-status/${batchId}`,
+      );
+      if (resp.data.payment_status === "SETTLEMENT") {
+        stopQrPolling();
+        router.push("/cashier");
+      }
+    } catch {
+      // polling errors are non-fatal
+    }
+  };
+
+  const handleQris = async () => {
+    setQrError(null);
+    setQrLoading(true);
+    try {
+      const resp = await api<{ data: { batch_id: string; qr_string: string } }>(
+        "/api/cashier/products/sell/qris",
+        {
+          method: "POST",
+          body: { items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })) },
+        },
+      );
+      setQrBatchId(resp.data.batch_id);
+      setQrString(resp.data.qr_string);
+      stopQrPolling();
+      qrPollRef.current = setInterval(() => pollQrStatus(resp.data.batch_id), 3000);
+    } catch (err) {
+      setQrError(err instanceof Error ? err.message : "Gagal membuat QRIS");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  useEffect(() => () => stopQrPolling(), []);
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-24">
@@ -86,31 +141,64 @@ export default function ProductPayPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-black p-4">
-          <div className="flex items-center gap-3 text-white">
-            <Icon name="check" className="h-5 w-5" />
-            <div>
-              <div className="text-sm font-bold">Lunas</div>
-              <div className="text-xs text-gray-400">Pembelian langsung dibayar cash</div>
-            </div>
+        {/* Payment method choice */}
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Metode Pembayaran</h3>
+          <div className="flex gap-3">
+            <button
+              onClick={handleCash}
+              disabled={submitting}
+              className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50 hover:bg-gray-50"
+            >
+              <Icon name="wallet" className="mx-auto mb-1 h-5 w-5 text-gray-500" />
+              {submitting ? "Memproses..." : "Bayar Cash"}
+            </button>
+            <button
+              onClick={handleQris}
+              disabled={qrLoading}
+              className="flex-1 rounded-xl border border-black bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50 hover:bg-gray-50"
+            >
+              <Icon name="qrcode" className="mx-auto mb-1 h-5 w-5" />
+              {qrLoading ? "Memproses..." : "Bayar QRIS"}
+            </button>
           </div>
+          {qrError && (
+            <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{qrError}</div>
+          )}
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white px-5 py-4">
-        <button onClick={handleSubmit} disabled={submitting} className={cn("w-full rounded-xl py-3 text-sm font-bold transition active:scale-95", submitting ? "bg-gray-200 text-gray-400" : "bg-black text-white")}>
-          {submitting ? "Memproses..." : "Bayar Sekarang"}
-        </button>
-      </div>
+      {/* QR Modal */}
+      {qrBatchId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" onClick={() => { stopQrPolling(); setQrBatchId(""); setQrString(""); }} />
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-white p-6 shadow-xl">
+            <div className="flex w-full items-center justify-between">
+              <h2 className="text-lg font-bold text-black">Scan QRIS</h2>
+              <button onClick={() => { stopQrPolling(); setQrBatchId(""); setQrString(""); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">
+                <Icon name="close" className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-center text-sm text-gray-500">
+              Minta pelanggan memindai kode QR di bawah ini.
+            </p>
+            <div className="flex items-center justify-center rounded-2xl border border-gray-200 p-4">
+              {qrString ? (
+                <QRCodeCanvas value={qrString} size={220} level="M" includeMargin />
+              ) : (
+                <div className="h-[220px] w-[220px] animate-pulse rounded-lg bg-gray-100" />
+              )}
+            </div>
+            <div className="flex w-full items-center justify-center gap-2 text-xs font-medium text-gray-500">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-black" />
+              Menunggu pembayaran...
+            </div>
+            <p className="text-center text-[11px] text-gray-400">
+              Halaman ini akan otomatis menutup setelah pembayaran berhasil.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
-
-function useMemo<T>(fn: () => T, deps: unknown[]): T {
-  const ref = { deps, value: fn(), fn } as { deps: unknown; value: T; fn: () => T };
-  if (JSON.stringify(ref.deps) !== JSON.stringify(deps)) {
-    ref.value = fn();
-    ref.deps = deps;
-  }
-  return ref.value;
 }

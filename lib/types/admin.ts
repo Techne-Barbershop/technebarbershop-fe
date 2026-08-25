@@ -220,7 +220,7 @@ export interface PaymentAnalyticsResponse {
   payments: PaymentAnalyticsItem[];
 }
 
-export type WorkerReservationStatus = "BOOKED" | "COMPLETED" | "CANCELLED";
+export type WorkerReservationStatus = "BOOKED" | "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED";
 
 export interface WorkerReservation {
   reservation_id: string;
@@ -265,6 +265,7 @@ export interface CashierReservation {
   payment_method: string;
   payment_status: string;
   gross_amount: string;
+  qr_string: string;
 }
 
 export interface CashierReservationsResponse {

@@ -29,7 +29,7 @@ export default function WalkinSchedulePage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
 
   useEffect(() => {
-    api<{ data: { staff: Staff[] } }>("/api/admin/staff")
+    api<{ data: { staff: Staff[] } }>("/api/staff")
       .then((r) => setStaffList((r.data.staff || []).filter((s) => s.role === "CAPSTER")))
       .catch(() => {});
   }, []);
