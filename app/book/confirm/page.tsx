@@ -77,7 +77,7 @@ export default function BookingConfirmationPage() {
       <div className="flex items-center gap-4">
         <BackButton href={backHref} />
         <h1 className="text-[18px] font-bold text-ink">
-          BOOKING CONFIRMATION
+          Booking Confirmation
         </h1>
       </div>
 
