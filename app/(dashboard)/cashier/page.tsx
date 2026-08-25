@@ -29,7 +29,7 @@ function toISODate(date: Date): string {
 
 function getMinutesSince10(time: string) {
   const [hh, mm] = time.split(":").map(Number);
-  return (hh - 10) * 60 + mm;
+  return Math.max(0, (hh - 10) * 60 + mm);
 }
 
 const STATUS_LABELS: Record<WorkerReservationStatus, string> = {
@@ -53,6 +53,8 @@ export default function CashierPage() {
   const [qrString, setQrString] = useState<string>("");
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
+  const [qrExpiresAt, setQrExpiresAt] = useState<number>(0);
+  const [qrRemaining, setQrRemaining] = useState("");
   const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data, loading, error, refetch } = useApiPath<{ data: CashierReservationsResponse }>(
@@ -83,6 +85,7 @@ export default function CashierPage() {
   }, [reservations]);
 
   const handleCheckout = async (res: CashierReservation) => {
+    if (!window.confirm(`Bayar ${res.customer_name} dengan CASH?`)) return;
     setCheckingOut(true);
     try {
       await (await import("@/lib/api")).api(`/api/cashier/reservations/${res.reservation_id}/checkout`, {
@@ -115,6 +118,17 @@ export default function CashierPage() {
         stopQrPolling();
         setQrRes(null);
         setQrString("");
+        setQrExpiresAt(0);
+        setQrRemaining("");
+        setSelectedRes(null);
+        refetch();
+      } else if (updated && (updated.payment_status === "CANCELLED" || updated.payment_status === "EXPIRED")) {
+        stopQrPolling();
+        setQrRes(null);
+        setQrString("");
+        setQrExpiresAt(0);
+        setQrRemaining("");
+        setQrError("QRIS sudah kedaluwarsa atau dibatalkan");
         refetch();
       }
     } catch {
@@ -131,10 +145,15 @@ export default function CashierPage() {
     setQrError(null);
     setQrString(res.qr_string);
     setQrRes(res);
+    // Use stored expiry if available, otherwise default to 10 minutes from now
+    const fallbackExpiry = Date.now() + 10 * 60 * 1000; // eslint-disable-line react-hooks/purity -- event handler, not render
+    const expiresAt = res.qr_expires_at ? new Date(res.qr_expires_at).getTime() : fallbackExpiry;
+    setQrExpiresAt(expiresAt);
     startQrPolling(res);
   };
 
   const handleBayarQRIS = async (res: CashierReservation) => {
+    if (!window.confirm(`Generate QRIS untuk ${res.customer_name}?`)) return;
     // If a QR was already generated for this reservation, just re-display it
     // instead of hitting the (idempotent) endpoint again.
     if (res.qr_string) {
@@ -150,6 +169,7 @@ export default function CashierPage() {
       );
       setQrString(resp.data.qr_string);
       setQrRes(res);
+      setQrExpiresAt(Date.now() + 10 * 60 * 1000); // eslint-disable-line react-hooks/purity -- event handler, not render
       startQrPolling(res);
     } catch (err) {
       setQrError(err instanceof Error ? err.message : "Gagal membuat QRIS");
@@ -159,6 +179,25 @@ export default function CashierPage() {
   };
 
   useEffect(() => () => stopQrPolling(), []);
+
+  // Countdown effect for QR expiry
+  useEffect(() => {
+    if (!qrExpiresAt) return;
+    const tick = () => {
+      const ms = qrExpiresAt - Date.now();
+      if (ms <= 0) {
+        setQrRemaining("Kedaluwarsa");
+        stopQrPolling();
+        return;
+      }
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      setQrRemaining(`${m}:${String(s).padStart(2, "0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [qrExpiresAt]);
 
   const changeDate = (days: number) => {
     const d = new Date(selectedDate);
@@ -391,11 +430,11 @@ export default function CashierPage() {
 
       {qrRes && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
-          <div className="absolute inset-0 bg-black/50" onClick={() => { stopQrPolling(); setQrRes(null); setQrString(""); }} />
+          <div className="absolute inset-0 bg-black/50" onClick={() => { stopQrPolling(); setQrRes(null); setQrString(""); setQrExpiresAt(0); setQrRemaining(""); }} />
           <div className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-white p-6 shadow-xl">
             <div className="flex w-full items-center justify-between">
               <h2 className="text-lg font-bold text-black">Scan QRIS</h2>
-              <button onClick={() => { stopQrPolling(); setQrRes(null); setQrString(""); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">
+              <button onClick={() => { stopQrPolling(); setQrRes(null); setQrString(""); setQrExpiresAt(0); setQrRemaining(""); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">
                 <Icon name="close" className="h-4 w-4" />
               </button>
             </div>
@@ -416,6 +455,12 @@ export default function CashierPage() {
               <span className="h-2 w-2 animate-pulse rounded-full bg-black" />
               Menunggu pembayaran...
             </div>
+            {qrRemaining && qrRemaining !== "Kedaluwarsa" && (
+              <p className="text-[11px] text-gray-400">Sisa waktu: {qrRemaining}</p>
+            )}
+            {qrRemaining === "Kedaluwarsa" && (
+              <p className="text-[11px] font-semibold text-red-500">QRIS kedaluwarsa</p>
+            )}
             <p className="text-center text-[11px] text-gray-400">
               Halaman ini akan otomatis menutup setelah pembayaran berhasil.
             </p>

@@ -194,7 +194,7 @@ export default function PaymentMethodPage() {
           )}
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-mist text-ink">
-            <Icon name="store" className="h-5.5 w-5.5" />
+            <Icon name="box" className="h-5.5 w-5.5" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[15px] font-bold text-ink">

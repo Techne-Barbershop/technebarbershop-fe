@@ -34,6 +34,17 @@ export default function WalkinCheckoutPage() {
     });
   }, [capsterId]);
 
+  if (!serviceIds.length || !date || !time || !capsterId) {
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 px-5 text-center">
+        <p className="text-sm text-gray-500">Data walk-in tidak lengkap. Silakan ulangi dari awal.</p>
+        <Link href="/cashier/walkin" className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white">
+          Kembali
+        </Link>
+      </div>
+    );
+  }
+
   const selectedServices = services.filter((s) => serviceIds.includes(s.service_id));
   const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
 
