@@ -21,6 +21,7 @@ const TABS: { id: WorkerReservationStatus; label: string }[] = [
 
 const STATUS_LABELS: Record<WorkerReservationStatus, string> = {
   BOOKED: "Booked",
+  PENDING_PAYMENT: "Pending Payment",
   COMPLETED: "Completed",
   CANCELLED: "Canceled",
 };

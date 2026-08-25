@@ -24,8 +24,11 @@ export default function WalkinCheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    api<{ data: { services: Service[] } }>("/api/admin/services").then((r) => setServices(r.data.services || []));
-    api<{ data: { staff: { user_id: string; name: string }[] } }>("/api/admin/staff").then((r) => {
+    api<{ data: { categories: { services: Service[] }[] } }>("/api/categories").then((r) => {
+      const all = (r.data.categories || []).flatMap((c) => c.services);
+      setServices(all);
+    });
+    api<{ data: { staff: { user_id: string; name: string }[] } }>("/api/staff").then((r) => {
       const c = (r.data.staff || []).find((s) => s.user_id === capsterId);
       if (c) setCapsterName(c.name);
     });
@@ -92,14 +95,10 @@ export default function WalkinCheckoutPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-black p-4">
-          <div className="flex items-center gap-3 text-white">
-            <Icon name="check" className="h-5 w-5" />
-            <div>
-              <div className="text-sm font-bold">Lunas</div>
-              <div className="text-xs text-gray-400">Walk-in langsung dibayar cash</div>
-            </div>
-          </div>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs text-gray-500">
+            Walk-in akan dibuat sebagai sesi <span className="font-semibold text-black">Booked</span>. Pembayaran dilakukan di kasir (Bayar di Tempat / Bayar QRIS) setelah sesi dibuat.
+          </p>
         </div>
       </div>
 

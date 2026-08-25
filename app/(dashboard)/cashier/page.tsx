@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { QRCodeCanvas } from "qrcode.react";
 import { useApiPath } from "@/lib/useApi";
 import type { CashierReservation, CashierReservationsResponse, WorkerReservationStatus } from "@/lib/types/admin";
 import { Icon } from "@/components/icons";
@@ -33,6 +34,7 @@ function getMinutesSince10(time: string) {
 
 const STATUS_LABELS: Record<WorkerReservationStatus, string> = {
   BOOKED: "Booked",
+  PENDING_PAYMENT: "Pending Payment",
   COMPLETED: "Completed",
   CANCELLED: "Canceled",
 };
@@ -41,11 +43,17 @@ const isWalkIn = (res: CashierReservation) =>
   res.customer_name === "WALK IN" || res.notes === "WALK IN";
 
 export default function CashierPage() {
-  const [viewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
   const [activeTab, setActiveTab] = useState("booked");
   const [selectedRes, setSelectedRes] = useState<CashierReservation | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+
+  const [qrRes, setQrRes] = useState<CashierReservation | null>(null);
+  const [qrString, setQrString] = useState<string>("");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data, loading, error, refetch } = useApiPath<{ data: CashierReservationsResponse }>(
     "/api/cashier/reservations",
@@ -57,7 +65,13 @@ export default function CashierPage() {
 
   const filteredList = useMemo(() => {
     if (activeTab === "walkin") return reservations.filter(isWalkIn);
-    return reservations.filter((res) => res.reservation_status === activeTab && !isWalkIn(res));
+    return reservations.filter((res) => {
+      if (isWalkIn(res)) return false;
+      if (activeTab === "booked") {
+        return res.reservation_status === "BOOKED" || res.reservation_status === "PENDING_PAYMENT";
+      }
+      return res.reservation_status.toUpperCase() === activeTab.toUpperCase();
+    });
   }, [reservations, activeTab]);
 
   const workerColumns = useMemo(() => {
@@ -83,6 +97,68 @@ export default function CashierPage() {
       setCheckingOut(false);
     }
   };
+
+  const stopQrPolling = () => {
+    if (qrPollRef.current) {
+      clearInterval(qrPollRef.current);
+      qrPollRef.current = null;
+    }
+  };
+
+  const pollQrStatus = async (res: CashierReservation) => {
+    try {
+      const resp = await (await import("@/lib/api")).api<{ data: CashierReservation }>(
+        `/api/cashier/reservations/${res.reservation_id}`,
+      );
+      const updated = resp.data;
+      if (updated && updated.payment_status === "SETTLEMENT") {
+        stopQrPolling();
+        setQrRes(null);
+        setQrString("");
+        refetch();
+      }
+    } catch {
+      // polling errors are non-fatal; keep polling
+    }
+  };
+
+  const startQrPolling = (res: CashierReservation) => {
+    stopQrPolling();
+    qrPollRef.current = setInterval(() => pollQrStatus(res), 3000);
+  };
+
+  const openExistingQr = (res: CashierReservation) => {
+    setQrError(null);
+    setQrString(res.qr_string);
+    setQrRes(res);
+    startQrPolling(res);
+  };
+
+  const handleBayarQRIS = async (res: CashierReservation) => {
+    // If a QR was already generated for this reservation, just re-display it
+    // instead of hitting the (idempotent) endpoint again.
+    if (res.qr_string) {
+      openExistingQr(res);
+      return;
+    }
+    setQrError(null);
+    setQrLoading(true);
+    try {
+      const resp = await (await import("@/lib/api")).api<{ data: { qr_string: string } }>(
+        `/api/cashier/reservations/${res.reservation_id}/qris`,
+        { method: "POST" },
+      );
+      setQrString(resp.data.qr_string);
+      setQrRes(res);
+      startQrPolling(res);
+    } catch (err) {
+      setQrError(err instanceof Error ? err.message : "Gagal membuat QRIS");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  useEffect(() => () => stopQrPolling(), []);
 
   const changeDate = (days: number) => {
     const d = new Date(selectedDate);
@@ -114,6 +190,20 @@ export default function CashierPage() {
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-sm font-semibold text-black outline-none" />
             <button onClick={() => changeDate(1)} className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 active:scale-95">
               <Icon name="chevronRight" className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex items-center rounded-lg border border-gray-200 bg-gray-100 p-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn("rounded-md px-3 py-1.5 text-[12px] font-bold transition", viewMode === "list" ? "bg-white text-black shadow-sm" : "text-gray-500")}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={cn("rounded-md px-3 py-1.5 text-[12px] font-bold transition", viewMode === "calendar" ? "bg-white text-black shadow-sm" : "text-gray-500")}
+            >
+              Calendar
             </button>
           </div>
         </div>
@@ -157,9 +247,20 @@ export default function CashierPage() {
                       <span className="text-gray-400">• {formatPrice(Number(res.service_total))}</span>
                     </span>
                     {res.reservation_status !== "CANCELLED" && !isPaid && (
-                      <button onClick={() => handleCheckout(res)} className="rounded-lg bg-black px-3 py-1.5 text-[11px] font-bold text-white transition active:scale-95">
-                        Bayar di tempat
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {res.qr_string ? (
+                          <button onClick={() => openExistingQr(res)} className="rounded-lg border border-black bg-white px-3 py-1.5 text-[11px] font-bold text-black transition active:scale-95">
+                            Lihat QR
+                          </button>
+                        ) : (
+                          <button onClick={() => handleBayarQRIS(res)} className="rounded-lg border border-black bg-white px-3 py-1.5 text-[11px] font-bold text-black transition active:scale-95">
+                            Bayar QRIS
+                          </button>
+                        )}
+                        <button onClick={() => handleCheckout(res)} className="rounded-lg bg-black px-3 py-1.5 text-[11px] font-bold text-white transition active:scale-95">
+                          Bayar di tempat
+                        </button>
+                      </div>
                     )}
                   </div>
                   <div className="flex gap-2 border-t border-gray-100 pt-3">
@@ -266,13 +367,58 @@ export default function CashierPage() {
             <div className="z-10 shrink-0 bg-white px-6 pt-4 pb-6 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
               <div className="flex flex-col gap-2.5">
                 {selectedRes.reservation_status !== "CANCELLED" && !paid(selectedRes) && (
-                  <button className="w-full rounded-xl bg-black py-3 text-sm font-bold text-white transition active:scale-95 disabled:opacity-50" disabled={checkingOut} onClick={() => handleCheckout(selectedRes)}>
-                    {checkingOut ? "Memproses..." : "Bayar di tempat"}
-                  </button>
+                  <div className="flex gap-2.5">
+                    {selectedRes.qr_string ? (
+                      <button className="flex-1 rounded-xl border border-black bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50" disabled={qrLoading} onClick={() => openExistingQr(selectedRes)}>
+                        Lihat QR
+                      </button>
+                    ) : (
+                      <button className="flex-1 rounded-xl border border-black bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50" disabled={qrLoading} onClick={() => handleBayarQRIS(selectedRes)}>
+                        {qrLoading ? "Memproses..." : "Bayar QRIS"}
+                      </button>
+                    )}
+                    <button className="flex-1 rounded-xl bg-black py-3 text-sm font-bold text-white transition active:scale-95 disabled:opacity-50" disabled={checkingOut} onClick={() => handleCheckout(selectedRes)}>
+                      {checkingOut ? "Memproses..." : "Bayar di tempat"}
+                    </button>
+                  </div>
                 )}
                 <SecondaryButton onClick={() => setSelectedRes(null)}>Close</SecondaryButton>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {qrRes && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" onClick={() => { stopQrPolling(); setQrRes(null); setQrString(""); }} />
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-white p-6 shadow-xl">
+            <div className="flex w-full items-center justify-between">
+              <h2 className="text-lg font-bold text-black">Scan QRIS</h2>
+              <button onClick={() => { stopQrPolling(); setQrRes(null); setQrString(""); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">
+                <Icon name="close" className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-center text-sm text-gray-500">
+              Minta pelanggan memindai kode QR di bawah ini dengan e-wallet mereka.
+            </p>
+            {qrError && (
+              <div className="w-full rounded-lg bg-red-50 px-3 py-2 text-center text-xs font-medium text-red-600">{qrError}</div>
+            )}
+            <div className="flex items-center justify-center rounded-2xl border border-gray-200 p-4">
+              {qrString ? (
+                <QRCodeCanvas value={qrString} size={220} level="M" includeMargin />
+              ) : (
+                <div className="h-[220px] w-[220px] animate-pulse rounded-lg bg-gray-100" />
+              )}
+            </div>
+            <div className="flex w-full items-center justify-center gap-2 text-xs font-medium text-gray-500">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-black" />
+              Menunggu pembayaran...
+            </div>
+            <p className="text-center text-[11px] text-gray-400">
+              Halaman ini akan otomatis menutup setelah pembayaran berhasil.
+            </p>
           </div>
         </div>
       )}
