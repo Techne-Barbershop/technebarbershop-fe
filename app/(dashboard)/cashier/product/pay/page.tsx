@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 import { Icon } from "@/components/icons";
-import { cn } from "@/lib/utils/cn";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/utils/format";
 
@@ -18,10 +17,18 @@ export default function ProductPayPage() {
 
   const items = (() => {
     if (!itemsStr) return [];
-    return itemsStr.split(",").map((entry) => {
+    const raw = itemsStr.split(",").map((entry) => {
       const [id, qtyStr] = entry.split(":");
-      return { product_id: id, quantity: Number(qtyStr) };
+      return { product_id: id?.trim() ?? "", quantity: Number(qtyStr) };
     });
+    // Filter invalid entries
+    const valid = raw.filter((i) => i.product_id && Number.isFinite(i.quantity) && i.quantity > 0);
+    // Deduplicate by product_id (sum quantities)
+    const merged = new Map<string, number>();
+    for (const i of valid) {
+      merged.set(i.product_id, (merged.get(i.product_id) ?? 0) + i.quantity);
+    }
+    return Array.from(merged, ([product_id, quantity]) => ({ product_id, quantity }));
   })();
 
   const [products, setProducts] = useState<Record<string, Product>>({});
@@ -50,12 +57,10 @@ export default function ProductPayPage() {
   const handleCash = async () => {
     setSubmitting(true);
     try {
-      for (const item of items) {
-        await api("/api/cashier/products/sell", {
-          method: "POST",
-          body: { product_id: item.product_id, quantity: item.quantity, payment_method: "CASH" },
-        });
-      }
+      await api("/api/cashier/products/sell/batch", {
+        method: "POST",
+        body: { items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })) },
+      });
       router.push("/cashier");
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Gagal memproses pembayaran");
