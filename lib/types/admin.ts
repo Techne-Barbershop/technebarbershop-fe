@@ -266,6 +266,7 @@ export interface CashierReservation {
   payment_status: string;
   gross_amount: string;
   qr_string: string;
+  qr_expires_at: string;
 }
 
 export interface CashierReservationsResponse {
