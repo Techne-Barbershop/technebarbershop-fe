@@ -7,7 +7,7 @@ import { useApiPath } from "@/lib/useApi";
 import type { CashierReservation, CashierReservationsResponse, WorkerReservationStatus } from "@/lib/types/admin";
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
-import { SecondaryButton } from "@/components/Buttons";
+import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
 import { formatDuration, formatPrice } from "@/lib/utils/format";
 
 const TABS: { id: string; label: string }[] = [
@@ -17,7 +17,7 @@ const TABS: { id: string; label: string }[] = [
   { id: "CANCELLED", label: "Canceled" },
 ];
 
-const HOUR_HEIGHT = 72;
+const HOUR_HEIGHT = 140;
 const HOUR_COUNT = 12;
 
 function toISODate(date: Date): string {
@@ -40,13 +40,16 @@ const STATUS_LABELS: Record<WorkerReservationStatus, string> = {
 };
 
 const isWalkIn = (res: CashierReservation) =>
-  res.customer_name === "WALK IN" || res.notes === "WALK IN";
+  res.customer_id === "CUS-WALKIN" || res.customer_name === "WALK IN" || res.notes === "WALK IN";
 
 export default function CashierPage() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
   const [activeTab, setActiveTab] = useState("booked");
   const [selectedRes, setSelectedRes] = useState<CashierReservation | null>(null);
+  const [actionRes, setActionRes] = useState<CashierReservation | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "CASH" | "QRIS" | "CANCEL"; res: CashierReservation } | null>(null);
+  const [qrisSuccessRes, setQrisSuccessRes] = useState<CashierReservation | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
 
   const [qrRes, setQrRes] = useState<CashierReservation | null>(null);
@@ -65,32 +68,72 @@ export default function CashierPage() {
   const reservations = useMemo(() => data?.data.reservations ?? [], [data]);
   const paid = (res: CashierReservation) => res.payment_status === "SETTLEMENT";
 
+  const getDisplayStatus = (res: CashierReservation) => {
+    if (res.reservation_status === "CANCELLED") return "CANCELLED";
+    if (res.reservation_status === "COMPLETED") return "COMPLETED";
+    if (isWalkIn(res)) return "WALK IN";
+    return "BOOKED";
+  };
+
   const filteredList = useMemo(() => {
-    if (activeTab === "walkin") return reservations.filter(isWalkIn);
     return reservations.filter((res) => {
-      if (isWalkIn(res)) return false;
+      // Completed and Cancelled tabs show ALL reservations, including walk-ins
+      if (activeTab.toUpperCase() === "COMPLETED" || activeTab.toUpperCase() === "CANCELLED") {
+        return res.reservation_status.toUpperCase() === activeTab.toUpperCase();
+      }
+      
+      // If the reservation is already COMPLETED or CANCELLED, it should NOT appear in "booked" or "walkin" tabs
+      if (res.reservation_status.toUpperCase() === "COMPLETED" || res.reservation_status.toUpperCase() === "CANCELLED") {
+        return false;
+      }
+      
+      // For remaining active reservations (BOOKED / PENDING_PAYMENT):
+      if (isWalkIn(res)) {
+        return activeTab === "walkin";
+      }
+      
+      // If NOT a walk-in, show in "booked" tab
       if (activeTab === "booked") {
         return res.reservation_status === "BOOKED" || res.reservation_status === "PENDING_PAYMENT";
       }
-      return res.reservation_status.toUpperCase() === activeTab.toUpperCase();
+      
+      return false;
     });
   }, [reservations, activeTab]);
 
+  const { data: staffData } = useApiPath<{ data: { staff: any[] } }>("/api/staff");
+  const { data: servicesData } = useApiPath<{ data: { categories: any[] } }>("/api/categories");
+
+  const getServicePrices = (serviceIdsStr: string) => {
+    if (!servicesData?.data?.categories || !serviceIdsStr) return [];
+    const allServices = servicesData.data.categories.flatMap((c: any) => c.services || []);
+    const ids = serviceIdsStr.split(",");
+    const result = [];
+    for (const id of ids) {
+      const s = allServices.find((s: any) => s.service_id === id);
+      if (s) result.push({ name: s.name, price: Number(s.price) });
+    }
+    return result;
+  };
+
   const workerColumns = useMemo(() => {
+    if (staffData?.data?.staff) {
+      return staffData.data.staff
+        .filter((s: any) => s.role === "CAPSTER")
+        .map((s: any) => ({ id: s.user_id, name: s.name }));
+    }
     const seen = new Map<string, string>();
     for (const res of reservations) {
       if (!seen.has(res.capster_id)) seen.set(res.capster_id, res.capster_name);
     }
     return Array.from(seen, ([id, name]) => ({ id, name }));
-  }, [reservations]);
+  }, [reservations, staffData]);
 
   const handleCheckout = async (res: CashierReservation) => {
-    if (!window.confirm(`Bayar ${res.customer_name} dengan CASH?`)) return;
     setCheckingOut(true);
     try {
       await (await import("@/lib/api")).api(`/api/cashier/reservations/${res.reservation_id}/checkout`, {
         method: "POST",
-        body: { payment_method: "CASH" },
       });
       setSelectedRes(null);
       refetch();
@@ -98,6 +141,31 @@ export default function CashierPage() {
       window.alert(err instanceof Error ? err.message : "Gagal memproses pembayaran");
     } finally {
       setCheckingOut(false);
+    }
+  };
+
+  const handleSelesai = async (res: CashierReservation) => {
+    if (!window.confirm(`Tandai ${res.customer_name} sebagai Selesai?`)) return;
+    try {
+      await (await import("@/lib/api")).api(`/api/cashier/reservations/${res.reservation_id}/complete`, {
+        method: "POST",
+      });
+      setSelectedRes(null);
+      refetch();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Gagal menyelesaikan reservasi");
+    }
+  };
+
+  const handleCancel = async (res: CashierReservation) => {
+    try {
+      await (await import("@/lib/api")).api(`/api/cashier/reservations/${res.reservation_id}/cancel`, {
+        method: "POST",
+      });
+      setSelectedRes(null);
+      refetch();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Gagal membatalkan reservasi");
     }
   };
 
@@ -121,6 +189,7 @@ export default function CashierPage() {
         setQrExpiresAt(0);
         setQrRemaining("");
         setSelectedRes(null);
+        setQrisSuccessRes(updated);
         refetch();
       } else if (updated && (updated.payment_status === "CANCELLED" || updated.payment_status === "EXPIRED")) {
         stopQrPolling();
@@ -153,7 +222,6 @@ export default function CashierPage() {
   };
 
   const handleBayarQRIS = async (res: CashierReservation) => {
-    if (!window.confirm(`Generate QRIS untuk ${res.customer_name}?`)) return;
     // If a QR was already generated for this reservation, just re-display it
     // instead of hitting the (idempotent) endpoint again.
     if (res.qr_string) {
@@ -208,19 +276,7 @@ export default function CashierPage() {
   return (
     <div className="flex flex-col pb-20">
       <div className="sticky top-16 z-40 border-b border-gray-200 bg-white px-5 py-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-black">Cashier</h1>
-          <div className="flex gap-2">
-            <Link href="/cashier/walkin" className="flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-xs font-semibold text-white transition hover:bg-gray-800">
-              <Icon name="plus" className="h-4 w-4" />
-              Walk In
-            </Link>
-            <Link href="/cashier/product" className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-gray-50">
-              <Icon name="tag" className="h-4 w-4" />
-              Beli Produk
-            </Link>
-          </div>
-        </div>
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button onClick={() => changeDate(-1)} className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 active:scale-95">
@@ -246,13 +302,15 @@ export default function CashierPage() {
             </button>
           </div>
         </div>
-        <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar">
-          {TABS.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex h-9 items-center justify-center rounded-full px-5 text-[13px] font-semibold whitespace-nowrap transition active:scale-95", activeTab === tab.id ? "bg-black text-white" : "border border-gray-200 bg-white text-black hover:bg-gray-50")}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {viewMode === "list" && (
+          <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar">
+            {TABS.map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex h-9 items-center justify-center rounded-full px-5 text-[13px] font-semibold whitespace-nowrap transition active:scale-95", activeTab === tab.id ? "bg-black text-white" : "border border-gray-200 bg-white text-black hover:bg-gray-50")}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading && <div className="mt-4 flex justify-center py-16 text-center text-gray-400"><p className="text-sm">Memuat data...</p></div>}
@@ -279,30 +337,19 @@ export default function CashierPage() {
                       {STATUS_LABELS[res.reservation_status]}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
+                  <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3 pb-2">
                     <span className="flex items-center gap-1.5 text-xs font-semibold text-black">
                       <Icon name={isPaid ? "check" : "close"} className={cn("h-4 w-4", isPaid ? "text-black" : "text-gray-300")} />
                       {isPaid ? `Lunas (${res.payment_method || "CASH"})` : "Belum Bayar"}
                       <span className="text-gray-400">• {formatPrice(Number(res.service_total))}</span>
                     </span>
-                    {res.reservation_status !== "CANCELLED" && !isPaid && (
-                      <div className="flex items-center gap-2">
-                        {res.qr_string ? (
-                          <button onClick={() => openExistingQr(res)} className="rounded-lg border border-black bg-white px-3 py-1.5 text-[11px] font-bold text-black transition active:scale-95">
-                            Lihat QR
-                          </button>
-                        ) : (
-                          <button onClick={() => handleBayarQRIS(res)} className="rounded-lg border border-black bg-white px-3 py-1.5 text-[11px] font-bold text-black transition active:scale-95">
-                            Bayar QRIS
-                          </button>
-                        )}
-                        <button onClick={() => handleCheckout(res)} className="rounded-lg bg-black px-3 py-1.5 text-[11px] font-bold text-white transition active:scale-95">
-                          Bayar di tempat
-                        </button>
-                      </div>
-                    )}
                   </div>
-                  <div className="flex gap-2 border-t border-gray-100 pt-3">
+                  <div className="flex gap-2 border-t border-gray-100 pt-2">
+                    {res.reservation_status === "BOOKED" && (
+                      <PrimaryButton className="flex-1" onClick={() => setActionRes(res)}>
+                        {isPaid ? "Ubah Status" : "Bayar"}
+                      </PrimaryButton>
+                    )}
                     <SecondaryButton className="flex-1" onClick={() => setSelectedRes(res)}>View Detail</SecondaryButton>
                   </div>
                 </div>
@@ -346,11 +393,20 @@ export default function CashierPage() {
                           const top = (getMinutesSince10(res.start_time) / 60) * HOUR_HEIGHT;
                           const height = (res.duration_minutes / 60) * HOUR_HEIGHT;
                           const isPaid = paid(res);
+                          const displayStatus = getDisplayStatus(res);
+                          
                           return (
-                            <button key={res.reservation_id} onClick={() => setSelectedRes(res)} className={cn("absolute right-1 left-1 overflow-hidden rounded-md border p-1.5 text-left transition active:scale-[0.98]", res.reservation_status === "BOOKED" && (isPaid ? "border-black bg-black text-white" : "border-black/20 bg-gray-100 text-black"), res.reservation_status === "COMPLETED" && "border-gray-200 bg-white text-gray-500", res.reservation_status === "CANCELLED" && "border-gray-200 bg-white text-gray-300 opacity-60 line-through")} style={{ top, height }}>
-                              <div className="truncate text-[11px] font-bold">{res.customer_name}</div>
+                            <button key={res.reservation_id} onClick={() => setSelectedRes(res)} className={cn("absolute right-1 left-1 overflow-hidden rounded-md border p-1.5 text-left transition active:scale-[0.98]", 
+                              displayStatus === "BOOKED" && "border-black-200 bg-blue-50 text-blue-900 hover:bg-blue-100", 
+                              displayStatus === "WALK IN" && "border-black-200 bg-green-50 text-green-900 hover:bg-green-100", 
+                              displayStatus === "COMPLETED" && "border-white bg-black text-white hover:bg-gray-900", 
+                              displayStatus === "CANCELLED" && "border-black-200 bg-red-50 text-red-500 opacity-60 line-through hover:bg-red-100"
+                            )} style={{ top, height }}>
+                              <div className="truncate text-[11px] font-bold">
+                                {res.customer_name} <span className="font-medium opacity-70">({displayStatus})</span>
+                              </div>
                               {height >= 40 && <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">{res.start_time} • {res.service_names}</div>}
-                              {height >= 54 && <div className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", isPaid ? "bg-white/20 text-white" : "border border-black text-black")}>{isPaid ? "Lunas" : "Belum Bayar"}</div>}
+                              {height >= 54 && <div className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", (isPaid && displayStatus === "COMPLETED") ? "bg-white/20 text-white" : "border border-current opacity-70")}>{isPaid ? "Lunas" : "Belum Bayar"}</div>}
                             </button>
                           );
                         })}
@@ -405,24 +461,58 @@ export default function CashierPage() {
             </div>
             <div className="z-10 shrink-0 bg-white px-6 pt-4 pb-6 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
               <div className="flex flex-col gap-2.5">
-                {selectedRes.reservation_status !== "CANCELLED" && !paid(selectedRes) && (
-                  <div className="flex gap-2.5">
-                    {selectedRes.qr_string ? (
-                      <button className="flex-1 rounded-xl border border-black bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50" disabled={qrLoading} onClick={() => openExistingQr(selectedRes)}>
-                        Lihat QR
-                      </button>
-                    ) : (
-                      <button className="flex-1 rounded-xl border border-black bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50" disabled={qrLoading} onClick={() => handleBayarQRIS(selectedRes)}>
-                        {qrLoading ? "Memproses..." : "Bayar QRIS"}
-                      </button>
-                    )}
-                    <button className="flex-1 rounded-xl bg-black py-3 text-sm font-bold text-white transition active:scale-95 disabled:opacity-50" disabled={checkingOut} onClick={() => handleCheckout(selectedRes)}>
-                      {checkingOut ? "Memproses..." : "Bayar di tempat"}
-                    </button>
-                  </div>
-                )}
                 <SecondaryButton onClick={() => setSelectedRes(null)}>Close</SecondaryButton>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {actionRes && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setActionRes(null)} />
+          <div className="relative flex w-auto max-w-[95vw] flex-col gap-4 overflow-hidden rounded-3xl bg-white p-6 shadow-xl">
+            <div className="flex w-full items-center justify-between mb-2 gap-8">
+              <h2 className="text-lg font-bold text-black">{paid(actionRes) ? "Ubah Status" : "Pilih Pembayaran"}</h2>
+              <button onClick={() => setActionRes(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">
+                <Icon name="close" className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="flex flex-row gap-3 justify-center">
+              {paid(actionRes) ? (
+                <>
+                  <button className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-black w-40 h-32 text-sm font-bold text-white transition active:scale-95" onClick={() => { handleSelesai(actionRes); setActionRes(null); }}>
+                    <Icon name="check" className="h-10 w-10" />
+                    <span>Selesai</span>
+                  </button>
+                  <button className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-red-500 bg-white w-40 h-32 text-sm font-bold text-red-500 transition active:scale-95" onClick={() => { handleCancel(actionRes); setActionRes(null); }}>
+                    <Icon name="close" className="h-10 w-10" />
+                    <span>Batalkan</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {actionRes.qr_string ? (
+                    <button className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-black bg-white w-32 h-28 px-1 text-xs font-bold text-black transition active:scale-95 disabled:opacity-50" disabled={qrLoading} onClick={() => { openExistingQr(actionRes); setActionRes(null); }}>
+                      <Icon name="qrcode" className="h-8 w-8" />
+                      <span className="text-center leading-tight">Lihat QR</span>
+                    </button>
+                  ) : (
+                    <button className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-black bg-white w-32 h-28 px-1 text-xs font-bold text-black transition active:scale-95 disabled:opacity-50" disabled={qrLoading} onClick={() => setConfirmAction({ type: "QRIS", res: actionRes })}>
+                      <Icon name="qrcode" className="h-8 w-8" />
+                      <span className="text-center leading-tight">{qrLoading ? "Memproses..." : "QRIS"}</span>
+                    </button>
+                  )}
+                  <button className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-black w-32 h-28 px-1 text-xs font-bold text-white transition active:scale-95 disabled:opacity-50" disabled={checkingOut} onClick={() => setConfirmAction({ type: "CASH", res: actionRes })}>
+                    <Icon name="wallet" className="h-8 w-8" />
+                    <span className="text-center leading-tight">{checkingOut ? "Memproses..." : "Cash"}</span>
+                  </button>
+                  <button className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-red-500 bg-white w-32 h-28 px-1 text-xs font-bold text-red-500 transition active:scale-95" onClick={() => setConfirmAction({ type: "CANCEL", res: actionRes })}>
+                    <Icon name="close" className="h-8 w-8" />
+                    <span className="text-center leading-tight">Batalkan<br/>Reservasi</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -438,12 +528,12 @@ export default function CashierPage() {
                 <Icon name="close" className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-center text-sm text-gray-500">
-              Minta pelanggan memindai kode QR di bawah ini dengan e-wallet mereka.
-            </p>
+            
             {qrError && (
               <div className="w-full rounded-lg bg-red-50 px-3 py-2 text-center text-xs font-medium text-red-600">{qrError}</div>
             )}
+            
+            {/* QR CODE SECTION (AT TOP) */}
             <div className="flex items-center justify-center rounded-2xl border border-gray-200 p-4">
               {qrString ? (
                 <QRCodeCanvas value={qrString} size={220} level="M" includeMargin />
@@ -451,19 +541,106 @@ export default function CashierPage() {
                 <div className="h-[220px] w-[220px] animate-pulse rounded-lg bg-gray-100" />
               )}
             </div>
+            
             <div className="flex w-full items-center justify-center gap-2 text-xs font-medium text-gray-500">
               <span className="h-2 w-2 animate-pulse rounded-full bg-black" />
               Menunggu pembayaran...
             </div>
             {qrRemaining && qrRemaining !== "Kedaluwarsa" && (
-              <p className="text-[11px] text-gray-400">Sisa waktu: {qrRemaining}</p>
+              <p className="text-[11px] text-gray-400 -mt-2">Sisa waktu: {qrRemaining}</p>
             )}
             {qrRemaining === "Kedaluwarsa" && (
-              <p className="text-[11px] font-semibold text-red-500">QRIS kedaluwarsa</p>
+              <p className="text-[11px] font-semibold text-red-500 -mt-2">QRIS kedaluwarsa</p>
             )}
-            <p className="text-center text-[11px] text-gray-400">
-              Halaman ini akan otomatis menutup setelah pembayaran berhasil.
+            
+            {/* SERVICES SECTION (BELOW QR) */}
+            <div className="w-full text-left bg-gray-50 p-3 rounded-xl border border-gray-100 mt-2">
+              <div className="text-xs font-bold text-gray-500 mb-2 uppercase">Layanan</div>
+              
+              {/* List of individual services and prices */}
+              <div className="flex flex-col gap-1.5 mb-2">
+                {getServicePrices(qrRes.service_ids).length > 0 ? (
+                  getServicePrices(qrRes.service_ids).map((svc, idx) => (
+                    <div key={idx} className="flex justify-between text-[13px] text-gray-600">
+                      <span>{svc.name}</span>
+                      <span>{formatPrice(svc.price)}</span>
+                    </div>
+                  ))
+                ) : (
+                  // Fallback if services API hasn't loaded or ID mapping fails
+                  <div className="flex justify-between text-[13px] text-gray-600">
+                    <span>{qrRes.service_names}</span>
+                    <span></span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Total price */}
+              <div className="flex justify-between border-t border-gray-200 pt-2 border-dashed">
+                <span className="text-sm font-bold text-black">Total</span>
+                <span className="text-sm font-bold text-black">{formatPrice(Number(qrRes.service_total))}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmAction(null)} />
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-white p-6 shadow-xl text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-black mb-2">
+              <Icon name={confirmAction.type === "QRIS" ? "qrcode" : confirmAction.type === "CASH" ? "wallet" : "close"} className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-bold text-black">Konfirmasi {confirmAction.type === "CASH" ? "Pembayaran" : confirmAction.type === "QRIS" ? "QRIS" : "Pembatalan"}</h2>
+            <p className="text-sm text-gray-500">
+              {confirmAction.type === "CASH" && (
+                <>Apakah Anda yakin ingin memproses pembayaran CASH untuk <strong>{confirmAction.res.customer_name}</strong>?</>
+              )}
+              {confirmAction.type === "QRIS" && (
+                <>Generate kode QRIS untuk pembayaran <strong>{confirmAction.res.customer_name}</strong>?</>
+              )}
+              {confirmAction.type === "CANCEL" && (
+                <>Apakah Anda yakin ingin membatalkan reservasi <strong>{confirmAction.res.customer_name}</strong>?</>
+              )}
             </p>
+            <div className="flex w-full gap-3 mt-2">
+              <SecondaryButton className="flex-1" onClick={() => setConfirmAction(null)}>Kembali</SecondaryButton>
+              <PrimaryButton 
+                className={cn("flex-1", confirmAction.type === "CANCEL" && "bg-red-500 text-white")}
+                onClick={() => {
+                  const res = confirmAction.res;
+                  const type = confirmAction.type;
+                  setConfirmAction(null);
+                  setActionRes(null);
+                  if (type === "CASH") handleCheckout(res);
+                  else if (type === "QRIS") handleBayarQRIS(res);
+                  else if (type === "CANCEL") handleCancel(res);
+                }}
+              >
+                Ya, Lanjutkan
+              </PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {qrisSuccessRes && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setQrisSuccessRes(null)} />
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-white p-6 shadow-xl text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 mb-2">
+              <Icon name="check" className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-bold text-black">Pembayaran Berhasil!</h2>
+            <p className="text-sm text-gray-500">
+              Pembayaran QRIS untuk pelanggan <strong>{qrisSuccessRes.customer_name}</strong> telah berhasil diselesaikan sejumlah <strong>{formatPrice(Number(qrisSuccessRes.service_total))}</strong>.
+            </p>
+            <div className="w-full mt-4">
+              <PrimaryButton className="w-full" onClick={() => setQrisSuccessRes(null)}>
+                Tutup
+              </PrimaryButton>
+            </div>
           </div>
         </div>
       )}

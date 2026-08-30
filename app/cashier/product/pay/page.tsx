@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 import { Icon } from "@/components/icons";
+import { cn } from "@/lib/utils/cn";
+import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/utils/format";
 
@@ -33,6 +35,8 @@ export default function ProductPayPage() {
 
   const [products, setProducts] = useState<Record<string, Product>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"CASH" | "QRIS" | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // QR state
   const [qrBatchId, setQrBatchId] = useState("");
@@ -54,19 +58,21 @@ export default function ProductPayPage() {
   const totalPrice = items.reduce((s, i) => s + i.quantity * Number(products[i.product_id]?.price ?? 0), 0);
 
   // --- Cash ---
-  const handleCash = async () => {
+  const handleCashConfirm = async () => {
+    setConfirmAction(null);
     setSubmitting(true);
     try {
       await api("/api/cashier/products/sell/batch", {
         method: "POST",
         body: { items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })) },
       });
-      router.push("/cashier");
+      setShowSuccess(true);
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Gagal memproses pembayaran");
       setSubmitting(false);
     }
   };
+
 
   // --- QRIS ---
   const stopQrPolling = () => {
@@ -83,14 +89,17 @@ export default function ProductPayPage() {
       );
       if (resp.data.payment_status === "SETTLEMENT") {
         stopQrPolling();
-        router.push("/cashier");
+        setQrBatchId("");
+        setQrString("");
+        setShowSuccess(true);
       }
     } catch {
       // polling errors are non-fatal
     }
   };
 
-  const handleQris = async () => {
+  const handleQrisConfirm = async () => {
+    setConfirmAction(null);
     setQrError(null);
     setQrLoading(true);
     try {
@@ -151,15 +160,15 @@ export default function ProductPayPage() {
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Metode Pembayaran</h3>
           <div className="flex gap-3">
             <button
-              onClick={handleCash}
+              onClick={() => setConfirmAction("CASH")}
               disabled={submitting}
-              className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50 hover:bg-gray-50"
+              className="flex-1 rounded-xl border border-black bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50 hover:bg-gray-50"
             >
               <Icon name="wallet" className="mx-auto mb-1 h-5 w-5 text-gray-500" />
               {submitting ? "Memproses..." : "Bayar Cash"}
             </button>
             <button
-              onClick={handleQris}
+              onClick={() => setConfirmAction("QRIS")}
               disabled={qrLoading}
               className="flex-1 rounded-xl border border-black bg-white py-3 text-sm font-bold text-black transition active:scale-95 disabled:opacity-50 hover:bg-gray-50"
             >
@@ -173,6 +182,36 @@ export default function ProductPayPage() {
         </div>
       </div>
 
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmAction(null)} />
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-white p-6 shadow-xl text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-black mb-2">
+              <Icon name={confirmAction === "QRIS" ? "qrcode" : "wallet"} className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-bold text-black">Konfirmasi {confirmAction === "CASH" ? "Pembayaran" : "QRIS"}</h2>
+            <p className="text-sm text-gray-500">
+              {confirmAction === "CASH" && (
+                <>Apakah Anda yakin ingin memproses pembayaran CASH untuk <strong>pembelian produk ini</strong>?</>
+              )}
+              {confirmAction === "QRIS" && (
+                <>Generate kode QRIS untuk pembayaran <strong>pembelian produk ini</strong>?</>
+              )}
+            </p>
+            <div className="flex w-full gap-3 mt-2">
+              <SecondaryButton className="flex-1" onClick={() => setConfirmAction(null)}>Kembali</SecondaryButton>
+              <PrimaryButton 
+                className="flex-1"
+                onClick={confirmAction === "CASH" ? handleCashConfirm : handleQrisConfirm}
+              >
+                Ya, Lanjutkan
+              </PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* QR Modal */}
       {qrBatchId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
@@ -184,9 +223,6 @@ export default function ProductPayPage() {
                 <Icon name="close" className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-center text-sm text-gray-500">
-              Minta pelanggan memindai kode QR di bawah ini.
-            </p>
             <div className="flex items-center justify-center rounded-2xl border border-gray-200 p-4">
               {qrString ? (
                 <QRCodeCanvas value={qrString} size={220} level="M" includeMargin />
@@ -194,13 +230,48 @@ export default function ProductPayPage() {
                 <div className="h-[220px] w-[220px] animate-pulse rounded-lg bg-gray-100" />
               )}
             </div>
-            <div className="flex w-full items-center justify-center gap-2 text-xs font-medium text-gray-500">
+
+            <div className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4">
+              {items.map((item) => {
+                const p = products[item.product_id];
+                return (
+                  <div key={item.product_id} className="flex justify-between text-sm py-1">
+                    <span className="text-gray-600">{p?.name ?? item.product_id} x{item.quantity}</span>
+                    <span className="font-bold text-black">{formatPrice(Number(p?.price ?? 0) * item.quantity)}</span>
+                  </div>
+                );
+              })}
+              <div className="mt-2 flex justify-between border-t border-gray-300 pt-2">
+                <span className="text-sm font-bold text-black">Total</span>
+                <span className="text-sm font-bold text-black">{formatPrice(totalPrice)}</span>
+              </div>
+            </div>
+
+            <div className="flex w-full items-center justify-center gap-2 text-xs font-medium text-gray-500 mt-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-black" />
               Menunggu pembayaran...
             </div>
-            <p className="text-center text-[11px] text-gray-400">
-              Halaman ini akan otomatis menutup setelah pembayaran berhasil.
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-white p-6 shadow-xl text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 mb-2">
+              <Icon name="check" className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-bold text-black">Pembayaran Berhasil!</h2>
+            <p className="text-sm text-gray-500">
+              Transaksi telah selesai dan stok produk telah diperbarui.
             </p>
+            <div className="w-full mt-4">
+              <PrimaryButton className="w-full" onClick={() => router.push("/cashier")}>
+                Kembali ke Kasir
+              </PrimaryButton>
+            </div>
           </div>
         </div>
       )}

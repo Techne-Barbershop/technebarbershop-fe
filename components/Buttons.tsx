@@ -9,7 +9,7 @@ export function PrimaryButton({
   return (
     <button
       className={cn(
-        "inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-[15px] font-semibold text-paper transition active:scale-[0.99] disabled:bg-fog disabled:text-smoke",
+        "inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-[15px] font-semibold text-paper transition active:scale-[0.99] disabled:bg-fog disabled:text-smoke",
         className,
       )}
       {...props}
@@ -27,7 +27,7 @@ export function SecondaryButton({
   return (
     <button
       className={cn(
-        "inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-line bg-paper text-[15px] font-semibold text-ink transition active:scale-[0.99]",
+        "inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-line bg-paper text-[15px] font-semibold text-ink transition active:scale-[0.99]",
         className,
       )}
       {...props}

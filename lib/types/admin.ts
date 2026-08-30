@@ -142,6 +142,8 @@ export interface Transaction {
   total_duration_minutes: number;
   total_price: string;
   status: string;
+  created_at: string;
+  updated_at: string;
   details: TransactionDetail[];
 }
 
