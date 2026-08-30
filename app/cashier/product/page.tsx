@@ -55,8 +55,12 @@ export default function ProductPickPage() {
           <div className="space-y-2">
             {products.map((p) => (
               <div key={p.product_id} className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-4">
-                <div className="h-10 w-10 shrink-0 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <Icon name="tag" className="h-5 w-5 text-gray-400" />
+                <div className="h-10 w-10 shrink-0 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <Icon name="tag" className="h-5 w-5 text-gray-400" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-black truncate">{p.name}</div>
@@ -64,7 +68,7 @@ export default function ProductPickPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => setQty((prev) => ({ ...prev, [p.product_id]: Math.max(0, (prev[p.product_id] ?? 0) - 1) }))} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95">
-                    <Icon name="chevronLeft" className="h-4 w-4" />
+                    <div className="h-4 w-4 justify-center items-center mb-1"> - </div>
                   </button>
                   <span className="w-8 text-center text-sm font-bold text-black">{qty[p.product_id] ?? 0}</span>
                   <button onClick={() => setQty((prev) => ({ ...prev, [p.product_id]: Math.min(p.current_stock, (prev[p.product_id] ?? 0) + 1) }))} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95">
@@ -86,7 +90,7 @@ export default function ProductPickPage() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white px-5 py-4">
+      <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-30 border-t border-gray-200 bg-white px-5 py-4">
         <button onClick={handleNext} disabled={selected.length === 0} className={cn("w-full rounded-xl py-3 text-sm font-bold transition active:scale-95", selected.length > 0 ? "bg-black text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed")}>
           Lanjut ke Pembayaran
         </button>

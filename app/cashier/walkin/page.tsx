@@ -113,7 +113,7 @@ export default function WalkinPage() {
       </div>
 
       {pickedCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white px-5 py-3 shadow-lg">
+        <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-30 border-t border-gray-200 bg-white px-5 py-3 shadow-lg">
           <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
             <span>{pickedCount} layanan dipilih</span>
             <span className="font-bold text-black">{formatDuration(totalDuration)}</span>

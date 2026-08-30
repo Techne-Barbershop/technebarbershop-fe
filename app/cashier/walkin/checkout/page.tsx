@@ -79,7 +79,7 @@ export default function WalkinCheckoutPage() {
         </div>
       </div>
 
-      <div className="px-5 py-4 space-y-4">
+      <div className="px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Layanan</h3>
           {selectedServices.map((s) => (
@@ -97,23 +97,25 @@ export default function WalkinCheckoutPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Detail</div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-gray-500">Capster</span><span className="font-semibold text-black">{capsterName || capsterId}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Tanggal</span><span className="font-semibold text-black">{date}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Waktu</span><span className="font-semibold text-black">{time} – {reservationEnd}</span></div>
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Detail</div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">Capster</span><span className="font-semibold text-black">{capsterName || capsterId}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Tanggal</span><span className="font-semibold text-black">{date}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Waktu</span><span className="font-semibold text-black">{time} – {reservationEnd}</span></div>
+            </div>
           </div>
-        </div>
 
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-          <p className="text-xs text-gray-500">
-            Walk-in akan dibuat sebagai sesi <span className="font-semibold text-black">Booked</span>. Pembayaran dilakukan di kasir (Bayar di Tempat / Bayar QRIS) setelah sesi dibuat.
-          </p>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs text-gray-500">
+              Walk-in akan dibuat sebagai sesi <span className="font-semibold text-black">Booked</span>. Pembayaran dilakukan di kasir (Bayar di Tempat / Bayar QRIS) setelah sesi dibuat.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white px-5 py-4">
+      <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-30 border-t border-gray-200 bg-white px-5 py-4">
         <button onClick={handleConfirm} disabled={submitting} className={cn("w-full rounded-xl py-3 text-sm font-bold transition active:scale-95", submitting ? "bg-gray-200 text-gray-400" : "bg-black text-white")}>
           {submitting ? "Memproses..." : "Buat Walk In"}
         </button>

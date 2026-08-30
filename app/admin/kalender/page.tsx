@@ -23,7 +23,7 @@ function getMinutesSince10(time: string) {
 
 const STATUS_STYLE: Record<string, string> = {
   BOOKED: "bg-gray-100 border-black/20 text-black",
-  COMPLETED: "bg-black border-black text-white",
+  COMPLETED: "bg-black border-white text-white",
   CANCELLED: "bg-white border-gray-300 text-gray-400 opacity-70 line-through",
 };
 

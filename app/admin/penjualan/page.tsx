@@ -9,6 +9,7 @@ import { api, unwrap } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { Transaction, TransactionsResponse } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
+import { addMinutes } from "@/lib/utils/format";
 
 interface ProductSale {
   id: string;
@@ -27,6 +28,35 @@ function formatRupiah(value: string | number): string {
   const num = Number(value);
   if (Number.isNaN(num)) return "Rp 0";
   return "Rp " + num.toLocaleString("id-ID");
+}
+
+function formatDateTime(dateString: string) {
+  const date = new Date(dateString);
+
+  return `${date.toLocaleDateString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })}, ${date.toLocaleTimeString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })}`;
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+
+  return `${date.toLocaleDateString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  })}`;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -70,9 +100,9 @@ export default function PenjualanPage() {
     }
   };
 
-  const todayTotal = transactions
-    .filter((trx) => trx.status === "PAID" || trx.status === "COMPLETED")
-    .reduce((sum, trx) => sum + Number(trx.total_price), 0);
+  const paidTransactions = transactions.filter((trx) => trx.status === "PAID" || trx.status === "COMPLETED" || trx.status === "SETTLEMENT");
+  
+  const todayTotal = paidTransactions.reduce((sum, trx) => sum + Number(trx.total_price), 0);
 
   // Flatten transactions per service
   const flattenedTransactions = useMemo(() => {
@@ -121,7 +151,7 @@ export default function PenjualanPage() {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: "Total Transaksi (filter)", value: transactions.length.toLocaleString("id-ID"), icon: "wallet" },
+              { label: "Total Transaksi Berhasil (filter)", value: paidTransactions.length.toLocaleString("id-ID"), icon: "wallet" },
               { label: "Total Pendapatan (filter)", value: formatRupiah(todayTotal), icon: "dollar" },
             ].map((stat) => (
               <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-5">
@@ -161,10 +191,11 @@ export default function PenjualanPage() {
                     <thead>
                       <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-bold uppercase text-gray-500">
                         <th className="px-5 py-3 whitespace-nowrap">ID Transaksi</th>
+                        <th className="px-5 py-3 whitespace-nowrap">Waktu Transaksi</th>
                         <th className="px-5 py-3 whitespace-nowrap">Customer</th>
                         <th className="px-5 py-3 whitespace-nowrap">Capster</th>
                         <th className="px-5 py-3 whitespace-nowrap">Layanan</th>
-                        <th className="px-5 py-3 whitespace-nowrap">Waktu</th>
+                        <th className="px-5 py-3 whitespace-nowrap">Jadwal Reservasi</th>
                         <th className="px-5 py-3 whitespace-nowrap">Durasi</th>
                         <th className="px-5 py-3 text-right whitespace-nowrap">Pendapatan</th>
                         <th className="px-5 py-3 whitespace-nowrap">Status</th>
@@ -180,6 +211,7 @@ export default function PenjualanPage() {
                       {transactions.map((trx) => (
                         <tr key={trx.transaction_id} className="transition hover:bg-gray-50/50">
                           <td className="px-5 py-3 font-medium text-gray-600 whitespace-nowrap">{trx.transaction_id}</td>
+                          <td className="px-5 py-3 font-medium text-gray-600 whitespace-nowrap">{formatDateTime(trx.created_at)}</td>
                           <td className="px-5 py-3 whitespace-nowrap">
                             <div className="flex flex-col">
                               <span className="font-semibold text-black">{trx.customer_name}</span>
@@ -194,7 +226,7 @@ export default function PenjualanPage() {
                           <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
                             <div className="flex flex-col">
                               <span>{trx.booking_date}</span>
-                              <span className="text-xs text-gray-400">{trx.start_time}</span>
+                              <span className="text-xs text-gray-400">{trx.start_time} - {addMinutes(trx.start_time, trx.total_duration_minutes || 0)}</span>
                             </div>
                           </td>
                           <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{trx.total_duration_minutes} mnt</td>
@@ -396,7 +428,6 @@ export default function PenjualanPage() {
         onApply={(start, end) => {
           setStartDate(start);
           setEndDate(end);
-          refetch();
         }}
         initialStartDate={startDate}
         initialEndDate={endDate}
