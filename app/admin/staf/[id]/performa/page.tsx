@@ -39,10 +39,10 @@ interface PerformanceResponse {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  BOOKED: "Dipesan",
-  COMPLETED: "Selesai",
-  CANCELLED: "Dibatalkan",
-  PENDING_PAYMENT: "Menunggu Pembayaran",
+  BOOKED: "BOOKED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  PENDING_PAYMENT: "PENDING",
 };
 
 const STATUS_COLORS: Record<string, string> = {

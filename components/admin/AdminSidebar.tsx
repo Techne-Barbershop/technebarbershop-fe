@@ -17,7 +17,6 @@ const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
 ];
 
 const ANALYTICS_ITEMS: { href: string; label: string; icon: IconName }[] = [
-  { href: "/admin/analytics/item-sales", label: "Penjualan Item", icon: "chart" },
   { href: "/admin/analytics/payments", label: "Ringkasan Pembayaran", icon: "grid" },
 ];
 

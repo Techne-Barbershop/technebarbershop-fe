@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Icon } from "@/components/icons";
 import SummaryCard from "@/components/admin/SummaryCard";
 import TablePagination from "@/components/admin/TablePagination";
@@ -11,40 +11,26 @@ import { formatPrice } from "@/lib/utils/format";
 import type { ItemSalesResponse, StaffResponse } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
 
-function daysAgo(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+interface ItemSalesViewProps {
+  startDate?: string;
+  endDate?: string;
+  onOpenDateFilter: () => void;
 }
 
-function todayISO(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
-export default function ItemSalesView() {
-  const [location, setLocation] = useState("Techné a Barbershop");
-  const [staffId, setStaffId] = useState("");
-  const [dateRange, setDateRange] = useState({ start: daysAgo(7), end: todayISO() });
-  const [showDateFilter, setShowDateFilter] = useState(false);
+export default function ItemSalesView({ startDate, endDate, onOpenDateFilter }: ItemSalesViewProps) {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const { data: staffData } = useApiPath<{ data: StaffResponse }>("/api/admin/staff");
-  const staff = staffData?.data.staff ?? [];
+  useEffect(() => {
+    setPage(1);
+  }, [startDate, endDate]);
 
   const { data, loading, error } = useApiPath<{ data: ItemSalesResponse }>(
     "/api/admin/analytics/item-sales",
     {
-      start_date: dateRange.start,
-      end_date: dateRange.end,
-      staff_id: staffId || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
     },
   );
 
@@ -102,54 +88,29 @@ export default function ItemSalesView() {
     : [];
 
   return (
-    <div className="space-y-6 mt-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 outline-none focus:border-black"
-          >
-            <option>Techné a Barbershop</option>
-          </select>
-
-          <select
-            value={staffId}
-            onChange={(e) => {
-              setStaffId(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 outline-none focus:border-black"
-          >
-            <option value="">Semua Staff</option>
-            {staff.map((member) => (
-              <option key={member.user_id} value={member.user_id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            onClick={() => setShowDateFilter(true)}
-            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-          >
-            <Icon name="calendar" className="h-4 w-4 text-gray-400" />
-            <span className="whitespace-nowrap">
-              {dateRange.start && dateRange.end ? `${dateRange.start} s/d ${dateRange.end}` : "Semua Waktu"}
-            </span>
-            <Icon name="chevronDown" className="h-3 w-3 text-gray-400" />
-          </button>
+    <div className="flex flex-col space-y-4">
+      <div className="rounded-lg border border-gray-200 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 gap-4">
+          <h2 className="text-base font-bold text-black">Ringkasan Penjualan</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-gray-500">Filter Tanggal:</span>
+            <button
+              onClick={onOpenDateFilter}
+              className="flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-black transition hover:bg-gray-50"
+            >
+              <Icon name="calendar" className="h-4 w-4" />
+              {startDate && endDate ? `${startDate} s/d ${endDate}` : (startDate || endDate || "Semua Waktu")}
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-black transition hover:bg-gray-50"
+            >
+              <Icon name="download" className="h-4 w-4" />
+              Export
+            </button>
+          </div>
         </div>
-
-        <button
-          type="button"
-          onClick={handleExport}
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-gray-50"
-        >
-          <Icon name="download" className="h-4 w-4" />
-          Export
-        </button>
       </div>
 
       {loading && <p className="rounded-lg border border-gray-200 bg-white px-5 py-6 text-sm text-gray-400">Memuat data...</p>}
@@ -157,7 +118,6 @@ export default function ItemSalesView() {
       {!loading && !error && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <div className="xl:col-span-1">
-            <h2 className="mb-3 text-sm font-bold text-black">Ringkasan</h2>
             <SummaryCard rows={summaryRows} />
           </div>
 
@@ -216,13 +176,6 @@ export default function ItemSalesView() {
         </div>
       )}
 
-      <DateFilterModal
-        isOpen={showDateFilter}
-        onClose={() => setShowDateFilter(false)}
-        onApply={(start, end) => setDateRange({ start, end })}
-        initialStartDate={dateRange.start}
-        initialEndDate={dateRange.end}
-      />
     </div>
   );
 }

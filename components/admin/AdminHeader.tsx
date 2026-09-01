@@ -15,7 +15,6 @@ const TITLES: Record<string, string> = {
   "/admin/layanan/baru": "Layanan Baru",
   "/admin/inventori": "Inventori",
   "/admin/inventori/baru": "Tambah Produk",
-  "/admin/analytics/item-sales": "Penjualan berdasarkan item",
   "/admin/analytics/payments": "Ringkasan pembayaran",
 };
 
@@ -47,13 +46,6 @@ export default function AdminHeader({
         </button>
         <h1 className="text-lg font-bold text-black">{title}</h1>
         <div className="ml-auto flex items-center gap-3">
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition active:scale-95 hover:bg-gray-50"
-          >
-            <Icon name="bell" className="h-4.5 w-4.5" />
-          </button>
           <button
             type="button"
             onClick={handleLogout}

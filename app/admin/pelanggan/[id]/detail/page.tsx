@@ -200,7 +200,7 @@ export default function CustomerDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {data.reservations.length === 0 ? (
+                  {(!data.reservations || data.reservations.length === 0) ? (
                     <tr>
                       <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
                         Belum ada reservasi untuk periode ini.
