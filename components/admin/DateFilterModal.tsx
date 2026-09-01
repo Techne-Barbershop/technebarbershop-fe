@@ -183,8 +183,6 @@ export default function DateFilterModal({
 
         {/* Right Side: Custom Dates */}
         <div className="flex-1 flex flex-col justify-center">
-            <label className="text-s font-semibold text-gray-600">Custom</label>
-            <hr className="mb-4 border-gray-1000 border-t-2" />
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
             <div className="flex-1 space-y-1.5">
               <label className="text-xs font-semibold text-gray-600">Mulai Tanggal</label>

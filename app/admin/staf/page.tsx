@@ -368,12 +368,12 @@ export default function StafPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-black">Daftar Staf</h2>
-            <button onClick={openAddStaff} className="flex items-center gap-2 rounded-xl bg-black px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-800">
+            <button onClick={openAddStaff} className="flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-800">
               <Icon name="plus" className="h-4 w-4" /> Tambah Staf
             </button>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="rounded-lg border border-gray-200 bg-white">
             {staffLoading && <p className="px-5 py-6 text-sm text-gray-400">Memuat data...</p>}
             {staffError && <p className="px-5 py-6 text-sm text-red-500">{staffError}</p>}
             {!staffLoading && !staffError && (
@@ -446,7 +446,7 @@ export default function StafPage() {
       )}
 
       {mainTab === "calendar" && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
             <div className="flex items-center gap-3">
               <label className="text-sm font-semibold text-gray-700">Pilih Tanggal:</label>
@@ -531,12 +531,12 @@ export default function StafPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-black">Daftar Libur Khusus</h2>
-            <button onClick={openAddLeave} className="flex items-center gap-2 rounded-xl bg-black px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-800">
+            <button onClick={openAddLeave} className="flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-800">
               <Icon name="plus" className="h-4 w-4" /> Tambah Libur
             </button>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="rounded-lg border border-gray-200 bg-white">
             {leaveLoading && <p className="px-5 py-6 text-sm text-gray-400">Memuat data libur...</p>}
             {leaveError && <p className="px-5 py-6 text-sm text-red-500">{leaveError}</p>}
             {!leaveLoading && !leaveError && (
@@ -670,7 +670,7 @@ export default function StafPage() {
             {DAYS.map((dayName, dayIndex) => {
               const daySchedules = schedules.map((s, idx) => ({ ...s, originalIndex: idx })).filter(s => s.day_of_week === dayIndex);
               return (
-                <div key={dayIndex} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div key={dayIndex} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="font-bold text-sm">{dayName}</span>
                     <button type="button" onClick={() => addScheduleBlock(dayIndex)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
@@ -820,7 +820,7 @@ export default function StafPage() {
       {/* Dropdown Menu */}
       {dropdownConfig && (
         <div 
-          className="fixed z-50 w-36 rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
+          className="fixed z-50 w-36 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
           style={{ top: dropdownConfig.pos.top, right: dropdownConfig.pos.right }}
           onClick={(e) => e.stopPropagation()}
         >

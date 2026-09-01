@@ -14,8 +14,23 @@ function formatRupiah(value: string): string {
   return "Rp " + num.toLocaleString("id-ID");
 }
 
+function localISODate(d: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  
+  const y = parts.find(p => p.type === "year")?.value;
+  const m = parts.find(p => p.type === "month")?.value;
+  const day = parts.find(p => p.type === "day")?.value;
+  return `${y}-${m}-${day}`;
+}
+
 function todayISO(): string {
-  return new Date().toISOString().split("T")[0];
+  const d = new Date();
+  return localISODate(d);
 }
 
 function formatDateTime(dateString: string) {
@@ -53,9 +68,19 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: "CANCELLED",
 };
 
+interface MergedTransaction {
+  id: string;
+  title: string;
+  subtitle: string;
+  total_price: string;
+  date: string;
+  status: string;
+  is_product: boolean;
+}
+
 export default function BerandaPage() {
   const { data: statsData, loading, error } = useApiPath<{ data: DashboardStats }>("/api/admin/dashboard");
-  const [transactions, setTransactions] = useState<{ transaction_id: string; customer_id: string; customer_name: string; booking_date: string; total_price: string; start_time: string; total_duration_minutes: number; created_at: string; updated_at: string; status: string; }[]>([]);
+  const [transactions, setTransactions] = useState<MergedTransaction[]>([]);
   const [bookings, setBookings] = useState<Reservation[]>([]);
   const [chartData, setChartData] = useState<{ date: string; label: string; revenue: number }[]>([]);
 
@@ -63,24 +88,29 @@ export default function BerandaPage() {
 
   useEffect(() => {
     const today = todayISO();
-
     // Generate last 7 days
     const last7Days: { date: string; label: string; revenue: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const iso = d.toISOString().split("T")[0];
+      const iso = localISODate(d);
       const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
       last7Days.push({ date: iso, label, revenue: 0 });
     }
     const startDate = last7Days[0].date;
 
-    api<{ data: { transactions: any[] } }>("/api/admin/transactions", { query: { start_date: startDate, end_date: today, page: 1, page_size: 1000 } })
-      .then((p) => {
-        const txs = p.data.transactions || [];
+    Promise.all([
+      api<{ data: { transactions: any[] } }>("/api/admin/transactions", { query: { start_date: startDate, end_date: today, page: 1, page_size: 1000 } }),
+      api<{ data: { sales: any[] } }>("/api/admin/product-sales", { query: { start_date: startDate, end_date: today } })
+    ])
+      .then(([txRes, psRes]) => {
+        const txs = txRes.data.transactions || [];
+        const pss = psRes.data.sales || [];
         
         // Calculate chart data
         const newChartData = [...last7Days];
+        const merged: MergedTransaction[] = [];
+
         for (const tx of txs) {
           if ((tx.status === "PAID" || tx.status === "COMPLETED") && tx.updated_at) {
             const txDate = tx.updated_at.split("T")[0];
@@ -89,12 +119,40 @@ export default function BerandaPage() {
               newChartData[dayIndex].revenue += Number(tx.total_price) || 0;
             }
           }
+          merged.push({
+            id: tx.transaction_id,
+            title: tx.customer_name || tx.customer_id,
+            subtitle: "Jasa/Layanan",
+            total_price: tx.total_price,
+            date: tx.updated_at,
+            status: tx.status,
+            is_product: false,
+          });
         }
-        setChartData(newChartData);
 
-        // We no longer filter transactions for the bookings table, 
-        // we store all of them, and then render them separately.
-        setTransactions(txs);
+        for (const ps of pss) {
+          if (ps.payment_status === "SETTLEMENT" && ps.sale_date) {
+            const saleDate = ps.sale_date.split("T")[0].split(" ")[0]; // Handle both ISO and space separated formats
+            const dayIndex = newChartData.findIndex(d => d.date === saleDate);
+            if (dayIndex !== -1) {
+              newChartData[dayIndex].revenue += Number(ps.total_price) || 0;
+            }
+          }
+          merged.push({
+            id: ps.id,
+            title: ps.product_name,
+            subtitle: "Produk",
+            total_price: ps.total_price,
+            date: ps.sale_date,
+            status: ps.payment_status === "SETTLEMENT" ? "PAID" : ps.payment_status,
+            is_product: true,
+          });
+        }
+
+        merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setChartData(newChartData);
+        setTransactions(merged);
       })
       .catch(() => {
         setTransactions([]);
@@ -190,18 +248,21 @@ export default function BerandaPage() {
           <div className="mt-4 flex flex-col divide-y divide-gray-100">
             {transactions.length === 0 && <p className="py-3 text-sm text-gray-400">Belum ada transaksi.</p>}
             {transactions.slice(0, 5).map((transaction) => (
-              <div key={transaction.transaction_id} className="flex items-center gap-3 py-3">
+              <div key={transaction.id} className="flex items-center gap-3 py-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600 uppercase">
-                  {transaction.customer_name ? transaction.customer_name.charAt(0) : "?"}
+                  {transaction.is_product ? "P" : (transaction.title ? transaction.title.charAt(0) : "?")}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-black">{transaction.customer_name || transaction.customer_id} · {formatRupiah(transaction.total_price)}</div>
+                  <div className="truncate text-sm font-semibold text-black">{transaction.title} · {formatRupiah(transaction.total_price)}</div>
                   <div className="truncate text-xs text-gray-500">
-                    {transaction.transaction_id} · {formatDateTime(transaction.updated_at)}
+                    {transaction.subtitle}
+                  </div>
+                  <div className="truncate text-xs text-gray-500">
+                    {formatDateTime(transaction.date)}
                   </div>
                 </div>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
-                      transaction.status === "PAID" || transaction.status === "COMPLETED" ? "bg-green-100 text-green-700" :
+                      transaction.status === "PAID" || transaction.status === "COMPLETED" || transaction.status === "SETTLEMENT" ? "bg-green-100 text-green-700" :
                       transaction.status === "PENDING" ? "bg-yellow-100 text-yellow-700" :
                       "bg-gray-100 text-gray-700"
                     }`}>

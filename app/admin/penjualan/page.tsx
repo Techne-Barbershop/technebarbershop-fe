@@ -7,7 +7,7 @@ import DateFilterModal from "@/components/admin/DateFilterModal";
 import ItemSalesView from "@/components/admin/ItemSalesView";
 import { api, unwrap } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
-import type { Transaction, TransactionsResponse } from "@/lib/types/admin";
+import type { Transaction, TransactionsResponse, ItemSalesResponse } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
 import { addMinutes } from "@/lib/utils/format";
 
@@ -59,6 +59,22 @@ function formatDate(dateString: string) {
   })}`;
 }
 
+function getPaginationArray(currentPage: number, totalPages: number) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, "...", totalPages];
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+}
+
 const STATUS_BADGE: Record<string, string> = {
   PENDING: "bg-yellow-50 text-yellow-700",
   PAID: "bg-green-50 text-green-700",
@@ -66,8 +82,8 @@ const STATUS_BADGE: Record<string, string> = {
   CANCELLED: "bg-red-50 text-red-700",
 };
 
-type TabType = "Ringkasan Penjualan" | "Transaksi" | "Transaksi per Service" | "Penjualan Produk";
-const TABS: TabType[] = ["Ringkasan Penjualan", "Transaksi", "Transaksi per Service", "Penjualan Produk"];
+type TabType = "Ringkasan Penjualan" | "Transaksi (Layanan)" | "Transaksi per Service (Layanan)" | "Penjualan Produk";
+const TABS: TabType[] = ["Ringkasan Penjualan", "Transaksi (Layanan)", "Transaksi per Service (Layanan)", "Penjualan Produk"];
 
 export default function PenjualanPage() {
   const [activeTab, setActiveTab] = useState<TabType>("Ringkasan Penjualan");
@@ -78,17 +94,33 @@ export default function PenjualanPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detail, setDetail] = useState<Transaction | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentServicePage, setCurrentServicePage] = useState(1);
+  const [currentProductPage, setCurrentProductPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   const { data, loading, error, refetch } = useApiPath<{ data: TransactionsResponse }>("/api/admin/transactions", {
-    page: 1,
-    page_size: 1000, // fetch all for flattening on frontend
+    page: currentPage,
+    page_size: ITEMS_PER_PAGE,
     ...(startDate ? { start_date: startDate } : {}),
     ...(endDate ? { end_date: endDate } : {}),
   });
 
   const transactions = data?.data.transactions ?? [];
+  const transactionsSummary = data?.data.summary;
 
-  const { data: productSalesData } = useApiPath<{ data: { sales: ProductSale[] } }>("/api/admin/product-sales");
+  const { data: productSalesData } = useApiPath<{ data: { sales: ProductSale[], summary?: any } }>("/api/admin/product-sales", {
+    page: currentProductPage,
+    page_size: ITEMS_PER_PAGE,
+    ...(startDate ? { start_date: startDate } : {}),
+    ...(endDate ? { end_date: endDate } : {}),
+  });
   const productSales = productSalesData?.data.sales ?? [];
+  const productSummary = productSalesData?.data.summary;
+
+  const totalProductQty = productSummary?.total_products_sold || 0;
+  const totalProductRevenue = productSummary?.total_revenue || "0";
+  const totalProductPages = Math.ceil((productSummary?.total_items || 0) / ITEMS_PER_PAGE);
 
   const openDetail = async (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -100,12 +132,18 @@ export default function PenjualanPage() {
     }
   };
 
-  const paidTransactions = transactions.filter((trx) => trx.status === "PAID" || trx.status === "COMPLETED" || trx.status === "SETTLEMENT");
-  
-  const todayTotal = paidTransactions.reduce((sum, trx) => sum + Number(trx.total_price), 0);
+  const { data: itemSalesData } = useApiPath<{ data: ItemSalesResponse }>("/api/admin/analytics/item-sales", {
+    ...(startDate ? { start_date: startDate } : {}),
+    ...(endDate ? { end_date: endDate } : {}),
+  });
 
-  // Flatten transactions per service
-  const flattenedTransactions = useMemo(() => {
+  // Calculate from service transactions only for "Transaksi" and "Transaksi per Service" tabs
+  const totalServiceTransactionsCount = transactionsSummary?.total_successful || 0;
+  const totalServiceRevenue = transactionsSummary?.total_revenue || "0";
+  const totalPages = Math.ceil((transactionsSummary?.total_items || 0) / ITEMS_PER_PAGE);
+
+  // Flatten transactions per service (only for the current paginated parent transactions)
+  const paginatedFlattenedTransactions = useMemo(() => {
     const flat: Array<{
       trx: Transaction;
       service_id: string;
@@ -132,7 +170,12 @@ export default function PenjualanPage() {
         {TABS.map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab);
+              setCurrentPage(1);
+              setCurrentServicePage(1);
+              setCurrentProductPage(1);
+            }}
             className={cn(
               "-mb-px border-b-2 pb-3 text-sm font-semibold transition-colors",
               activeTab === tab ? "border-black text-black" : "border-transparent text-gray-500 hover:text-black"
@@ -144,15 +187,15 @@ export default function PenjualanPage() {
       </div>
 
       {activeTab === "Ringkasan Penjualan" && (
-        <ItemSalesView />
+        <ItemSalesView startDate={startDate} endDate={endDate} onOpenDateFilter={() => setShowDateFilter(true)} />
       )}
 
-      {activeTab !== "Ringkasan Penjualan" && (
+      {["Transaksi (Layanan)", "Transaksi per Service (Layanan)"].includes(activeTab) && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: "Total Transaksi Berhasil (filter)", value: paidTransactions.length.toLocaleString("id-ID"), icon: "wallet" },
-              { label: "Total Pendapatan (filter)", value: formatRupiah(todayTotal), icon: "dollar" },
+              { label: "Total Transaksi Berhasil (filter)", value: totalServiceTransactionsCount.toLocaleString("id-ID"), icon: "wallet" },
+              { label: "Total Pendapatan (filter)", value: formatRupiah(totalServiceRevenue), icon: "dollar" },
             ].map((stat) => (
               <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-5">
                 <div className="flex items-center justify-between">
@@ -185,10 +228,12 @@ export default function PenjualanPage() {
             {loading && <p className="px-5 py-6 text-sm text-gray-400">Memuat data...</p>}
             {error && <p className="px-5 py-6 text-sm text-red-500">{error}</p>}
             {!loading && !error && (
-              <div className="overflow-x-auto pb-4">
-                {activeTab === "Transaksi" ? (
-                  <table className="w-full min-w-[1000px] text-sm">
-                    <thead>
+              <div className="flex flex-col">
+                {activeTab === "Transaksi (Layanan)" ? (
+                  <>
+                    <div className="overflow-x-auto pb-4">
+                      <table className="w-full min-w-[1000px] text-sm">
+                        <thead>
                       <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-bold uppercase text-gray-500">
                         <th className="px-5 py-3 whitespace-nowrap">ID Transaksi</th>
                         <th className="px-5 py-3 whitespace-nowrap">Waktu Transaksi</th>
@@ -248,9 +293,39 @@ export default function PenjualanPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
+                      <span className="text-sm text-gray-500">
+                        Menampilkan {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, transactions.length)} dari {transactions.length}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {getPaginationArray(currentPage, totalPages).map((pageNumber, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => typeof pageNumber === "number" && setCurrentPage(pageNumber)}
+                            disabled={typeof pageNumber !== "number"}
+                            className={cn(
+                              "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition",
+                              currentPage === pageNumber
+                                ? "bg-black text-white"
+                                : typeof pageNumber === "number"
+                                ? "text-gray-500 hover:bg-gray-100"
+                                : "text-gray-400 cursor-default"
+                            )}
+                          >
+                            {pageNumber}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  </>
                 ) : (
-                  <table className="w-full min-w-[1000px] text-sm">
-                    <thead>
+                  <>
+                    <div className="overflow-x-auto pb-4">
+                      <table className="w-full min-w-[1000px] text-sm">
+                        <thead>
                       <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-bold uppercase text-gray-500">
                         <th className="px-5 py-3 whitespace-nowrap">ID Transaksi</th>
                         <th className="px-5 py-3 whitespace-nowrap">Customer</th>
@@ -263,12 +338,12 @@ export default function PenjualanPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {flattenedTransactions.length === 0 && (
+                      {paginatedFlattenedTransactions.length === 0 && (
                         <tr>
                           <td colSpan={8} className="px-5 py-6 text-center text-sm text-gray-400">Belum ada rincian transaksi per layanan.</td>
                         </tr>
                       )}
-                      {flattenedTransactions.map((item, index) => (
+                      {paginatedFlattenedTransactions.map((item, index) => (
                         <tr key={`${item.trx.transaction_id}-${item.service_id}-${index}`} className="transition hover:bg-gray-50/50">
                           <td className="px-5 py-3 font-medium text-gray-600 whitespace-nowrap">{item.trx.transaction_id}</td>
                           <td className="px-5 py-3 whitespace-nowrap">
@@ -306,6 +381,34 @@ export default function PenjualanPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
+                      <span className="text-sm text-gray-500">
+                        Menampilkan halaman {currentPage} dari total {totalPages} halaman
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {getPaginationArray(currentPage, totalPages).map((pageNumber, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => typeof pageNumber === "number" && setCurrentPage(pageNumber)}
+                            disabled={typeof pageNumber !== "number"}
+                            className={cn(
+                              "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition",
+                              currentPage === pageNumber
+                                ? "bg-black text-white"
+                                : typeof pageNumber === "number"
+                                ? "text-gray-500 hover:bg-gray-100"
+                                : "text-gray-400 cursor-default"
+                            )}
+                          >
+                            {pageNumber}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  </>
                 )}
               </div>
             )}
@@ -314,23 +417,50 @@ export default function PenjualanPage() {
       )}
 
       {activeTab === "Penjualan Produk" && (
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-            <h2 className="text-base font-bold text-black">Penjualan Produk</h2>
-            <span className="text-sm text-gray-500">{productSales.length} transaksi</span>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: "Total Produk Terjual (filter)", value: totalProductQty.toLocaleString("id-ID"), icon: "box" },
+              { label: "Total Pendapatan Produk (filter)", value: formatRupiah(totalProductRevenue), icon: "dollar" },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">{stat.label}</span>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+                    <Icon name={stat.icon as never} className="h-4.5 w-4.5" />
+                  </div>
+                </div>
+                <div className="mt-3 text-2xl font-bold text-black">{stat.value}</div>
+              </div>
+            ))}
           </div>
+
+          <div className="rounded-lg border border-gray-200 bg-white">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 px-4 py-3 gap-4">
+              <h2 className="text-base font-bold text-black">Penjualan Produk</h2>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-gray-500">Filter Tanggal:</span>
+                <button
+                  onClick={() => setShowDateFilter(true)}
+                  className="flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-black transition hover:bg-gray-50"
+                >
+                  <Icon name="calendar" className="h-4 w-4" />
+                  {startDate && endDate ? `${startDate} s/d ${endDate}` : (startDate || endDate || "Semua Waktu")}
+                </button>
+              </div>
+            </div>
           <div className="overflow-x-auto pb-4">
             <table className="w-full min-w-[1000px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-bold uppercase text-gray-500">
                   <th className="px-5 py-3 whitespace-nowrap">ID</th>
+                  <th className="px-5 py-3 whitespace-nowrap">Waktu Transaksi</th>
                   <th className="px-5 py-3 whitespace-nowrap">Produk</th>
                   <th className="px-5 py-3 text-right whitespace-nowrap">Qty</th>
                   <th className="px-5 py-3 text-right whitespace-nowrap">Total</th>
                   <th className="px-5 py-3 whitespace-nowrap">Kasir</th>
                   <th className="px-5 py-3 whitespace-nowrap">Metode</th>
                   <th className="px-5 py-3 whitespace-nowrap">Status</th>
-                  <th className="px-5 py-3 whitespace-nowrap">Waktu</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -342,6 +472,7 @@ export default function PenjualanPage() {
                 {productSales.map((sale) => (
                   <tr key={sale.id} className="transition hover:bg-gray-50/50">
                     <td className="px-5 py-3 font-medium text-gray-600 whitespace-nowrap">{sale.id}</td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{formatDateTime(sale.sale_date)}</td>
                     <td className="px-5 py-3 font-semibold text-black whitespace-nowrap">{sale.product_name}</td>
                     <td className="px-5 py-3 text-right text-gray-600 whitespace-nowrap">{sale.quantity}</td>
                     <td className="px-5 py-3 text-right font-bold text-black whitespace-nowrap">{formatRupiah(sale.total_price)}</td>
@@ -352,13 +483,39 @@ export default function PenjualanPage() {
                         {sale.payment_status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{sale.sale_date}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {totalProductPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
+              <span className="text-sm text-gray-500">
+                Menampilkan halaman {currentProductPage} dari total {totalProductPages} halaman
+              </span>
+              <div className="flex items-center gap-1">
+                {getPaginationArray(currentProductPage, totalProductPages).map((pageNumber, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => typeof pageNumber === "number" && setCurrentProductPage(pageNumber)}
+                    disabled={typeof pageNumber !== "number"}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition",
+                      currentProductPage === pageNumber
+                        ? "bg-black text-white"
+                        : typeof pageNumber === "number"
+                        ? "text-gray-500 hover:bg-gray-100"
+                        : "text-gray-400 cursor-default"
+                    )}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+        </>
       )}
 
       <Modal isOpen={!!selectedTransaction} onClose={() => setSelectedTransaction(null)} title="Detail Transaksi">
@@ -428,6 +585,9 @@ export default function PenjualanPage() {
         onApply={(start, end) => {
           setStartDate(start);
           setEndDate(end);
+          setCurrentPage(1);
+          setCurrentServicePage(1);
+          setCurrentProductPage(1);
         }}
         initialStartDate={startDate}
         initialEndDate={endDate}

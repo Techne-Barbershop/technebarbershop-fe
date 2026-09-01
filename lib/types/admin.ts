@@ -149,6 +149,11 @@ export interface Transaction {
 
 export interface TransactionsResponse {
   transactions: Transaction[];
+  summary?: {
+    total_items: number;
+    total_successful: number;
+    total_revenue: string;
+  };
   page: number;
   page_size: number;
 }
@@ -201,7 +206,6 @@ export interface ItemSalesResponse {
 export interface PaymentSummary {
   total_transaksi: number;
   pendapatan_kotor: string;
-  total_pengembalian: string;
   penggunaan_voucher: string;
   kembalian: string;
   total_pembayaran_net: string;
@@ -211,7 +215,6 @@ export interface PaymentAnalyticsItem {
   payment_name: string;
   total_transaksi: number;
   gross_payment: string;
-  refunds: string;
   penggunaan_voucher: string;
   kembalian: string;
   net_payment: string;

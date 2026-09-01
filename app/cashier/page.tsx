@@ -275,7 +275,7 @@ export default function CashierPage() {
 
   return (
     <div className="flex flex-col pb-20">
-      <div className="sticky top-16 z-40 border-b border-gray-200 bg-white px-5 py-4">
+      <div className="sticky top-16 z-40 border border-gray-200 bg-white px-5 py-4 rounded-lg">
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -361,10 +361,10 @@ export default function CashierPage() {
 
       {!loading && !error && viewMode === "calendar" && (
         <div className="mt-4">
-          <div className="overflow-x-auto px-5 no-scrollbar">
+          <div className="overflow-x-auto overflow-y-auto no-scrollbar max-h-[calc(100vh-220px)] border border-gray-200 rounded-lg">
             <div className="min-w-[840px]">
-              <div className="flex border-b border-gray-200">
-                <div className="w-14 shrink-0" />
+              <div className="sticky top-0 z-30 flex border-b border-gray-200 bg-white shadow-sm">
+                <div className="sticky left-0 z-40 w-14 shrink-0 bg-white" />
                 {workerColumns.map((worker) => (
                   <div key={worker.id} className="flex-1 border-l border-gray-200 px-2 py-2 text-center">
                     <div className="truncate text-[11px] font-bold text-black">{worker.name}</div>
@@ -372,7 +372,7 @@ export default function CashierPage() {
                 ))}
               </div>
               <div className="relative flex">
-                <div className="w-14 shrink-0">
+                <div className="sticky left-0 z-20 w-14 shrink-0 border-r border-gray-100 bg-white pt-2">
                   {Array.from({ length: HOUR_COUNT }).map((_, i) => (
                     <div key={i} className="relative pr-2 text-right text-[10px] font-semibold text-gray-500" style={{ height: HOUR_HEIGHT }}>
                       <span className="relative -top-2">{10 + i}:00</span>
