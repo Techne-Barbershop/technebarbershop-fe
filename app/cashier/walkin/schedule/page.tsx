@@ -29,6 +29,10 @@ export default function WalkinSchedulePage() {
   const [date, setDate] = useState<string | null>(todayStr);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [slots, setSlots] = useState<{ time: string; available: boolean }[]>([]);
+  
+  const [timeMode, setTimeMode] = useState<"SLOT" | "CUSTOM">("SLOT");
+  const [customStartTime, setCustomStartTime] = useState("");
+  const [customEndTime, setCustomEndTime] = useState("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
 
@@ -78,13 +82,24 @@ export default function WalkinSchedulePage() {
     const endM = totalMins % 60;
     return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
   };
+
+
   const reservationEnd = getEndTime();
 
-  const canProceed = capster && date && selectedTime;
+  const canProceed = capster && date && (timeMode === "SLOT" ? selectedTime : customStartTime);
 
   const handleNext = () => {
     if (!canProceed) return;
-    router.push(`/cashier/walkin/checkout?services=${serviceIds.join(",")}&duration=${totalDuration}&capster=${capster}&date=${date}&time=${selectedTime}`);
+    let url = `/cashier/walkin/checkout?services=${serviceIds.join(",")}&duration=${totalDuration}&capster=${capster}&date=${date}`;
+    if (timeMode === "SLOT") {
+      url += `&time=${selectedTime}`;
+    } else {
+      url += `&time=${customStartTime}`;
+      if (customEndTime) {
+        url += `&endTime=${customEndTime}`;
+      }
+    }
+    router.push(url);
   };
 
   const changeMonth = (delta: number) => {
@@ -251,45 +266,97 @@ export default function WalkinSchedulePage() {
 
         {/* Kolom 3: Waktu */}
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Waktu</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center justify-between">
+            <span>Waktu</span>
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button
+                onClick={() => setTimeMode("SLOT")}
+                className={cn("px-2 py-1 rounded-md text-[10px] font-bold transition", timeMode === "SLOT" ? "bg-white text-black shadow-sm" : "text-gray-500")}
+              >
+                SLOT
+              </button>
+              <button
+                onClick={() => setTimeMode("CUSTOM")}
+                className={cn("px-2 py-1 rounded-md text-[10px] font-bold transition", timeMode === "CUSTOM" ? "bg-white text-black shadow-sm" : "text-gray-500")}
+              >
+                CUSTOM
+              </button>
+            </div>
+          </div>
           {!capster || !date ? (
             <p className="text-sm text-gray-400 text-center py-4">Pilih tanggal terlebih dahulu.</p>
           ) : (
             <>
-              {slots.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">Tidak ada jadwal tersedia.</p> : (
-                <>
-                  <div className="grid grid-cols-3 gap-2">
-                    {slots.map((slot, i) => {
-                      const inBlock = selectedIndex >= 0 && i >= selectedIndex && i < selectedIndex + slotsNeeded;
-                      const isStart = selectedTime === slot.time;
-                      const disabled = !slot.available || !canStartAt(i);
-                      return (
-                        <button 
-                          key={slot.time} 
-                          type="button" 
-                          disabled={disabled} 
-                          onClick={() => setSelectedTime(slot.time)} 
-                          className={cn(
-                            "relative rounded-lg py-2.5 text-[13px] font-semibold transition",
-                            inBlock 
-                              ? "bg-black text-white" 
-                              : disabled 
-                                ? "bg-gray-100 text-gray-300 cursor-not-allowed" 
-                                : "border border-gray-200 bg-white text-black hover:bg-gray-50 active:scale-95"
-                          )}
-                        >
-                          {slot.time}
-                          {isStart && <span className="absolute -top-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-black" />}
-                        </button>
-                      );
-                    })}
+              {timeMode === "SLOT" ? (
+                slots.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">Tidak ada jadwal tersedia.</p> : (
+                  <>
+                    <div className="grid grid-cols-3 gap-2">
+                      {slots.map((slot, i) => {
+                        const inBlock = selectedIndex >= 0 && i >= selectedIndex && i < selectedIndex + slotsNeeded;
+                        const isStart = selectedTime === slot.time;
+                        const disabled = !slot.available || !canStartAt(i);
+                        return (
+                          <button 
+                            key={slot.time} 
+                            type="button" 
+                            disabled={disabled} 
+                            onClick={() => setSelectedTime(slot.time)} 
+                            className={cn(
+                              "relative rounded-lg py-2.5 text-[13px] font-semibold transition",
+                              inBlock 
+                                ? "bg-black text-white" 
+                                : disabled 
+                                  ? "bg-gray-100 text-gray-300 cursor-not-allowed" 
+                                  : "border border-gray-200 bg-white text-black hover:bg-gray-50 active:scale-95"
+                            )}
+                          >
+                            {slot.time}
+                            {isStart && <span className="absolute -top-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-black" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {reservationEnd && (
+                      <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 text-center">
+                        Sesi dari <strong className="text-black">{selectedTime}</strong> sampai <strong className="text-black">{reservationEnd}</strong> ({formatDuration(totalDuration)})
+                      </div>
+                    )}
+                  </>
+                )
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 mb-1 block">Jam Mulai</label>
+                    <input 
+                      type="time" 
+                      value={customStartTime} 
+                      onChange={(e) => setCustomStartTime(e.target.value)} 
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none" 
+                    />
                   </div>
-                  {reservationEnd && (
-                    <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 text-center">
-                      Sesi dari <strong className="text-black">{selectedTime}</strong> sampai <strong className="text-black">{reservationEnd}</strong> ({formatDuration(totalDuration)})
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 mb-1 block">Jam Selesai (Opsional)</label>
+                    <input 
+                      type="time" 
+                      value={customEndTime} 
+                      onChange={(e) => setCustomEndTime(e.target.value)} 
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none" 
+                    />
+                  </div>
+                  {customStartTime && (
+                    <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 text-center">
+                      Sesi dari <strong className="text-black">{customStartTime}</strong> sampai <strong className="text-black">
+                        {customEndTime || (() => {
+                          const [h, m] = customStartTime.split(":").map(Number);
+                          const totalMins = h * 60 + m + totalDuration;
+                          const endH = Math.floor(totalMins / 60);
+                          const endM = totalMins % 60;
+                          return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+                        })()}
+                      </strong> {customEndTime ? "" : `(${formatDuration(totalDuration)})`}
                     </div>
                   )}
-                </>
+                </div>
               )}
             </>
           )}

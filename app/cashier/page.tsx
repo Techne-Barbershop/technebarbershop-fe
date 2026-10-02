@@ -52,6 +52,25 @@ export default function CashierPage() {
   const [qrisSuccessRes, setQrisSuccessRes] = useState<CashierReservation | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
 
+  const [editingSchedule, setEditingSchedule] = useState<CashierReservation | null>(null);
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editCapsterId, setEditCapsterId] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+
+  const [currentMinutes, setCurrentMinutes] = useState(() => {
+    const now = new Date();
+    return (now.getHours() - 10) * 60 + now.getMinutes();
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setCurrentMinutes((now.getHours() - 10) * 60 + now.getMinutes());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [qrRes, setQrRes] = useState<CashierReservation | null>(null);
   const [qrString, setQrString] = useState<string>("");
   const [qrLoading, setQrLoading] = useState(false);
@@ -167,6 +186,53 @@ export default function CashierPage() {
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Gagal membatalkan reservasi");
     }
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!editingSchedule) return;
+    setEditLoading(true);
+    try {
+      await (await import("@/lib/api")).api(`/api/cashier/reservations/${editingSchedule.reservation_id}/schedule`, {
+        method: "PATCH",
+        body: {
+          start_time: editStartTime,
+          end_time: editEndTime,
+          capster_id: editCapsterId,
+        }
+      });
+      setEditingSchedule(null);
+      refetch();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Gagal memperbarui jadwal");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const openEditSchedule = (res: CashierReservation) => {
+    setEditingSchedule(res);
+    setEditStartTime(res.start_time);
+    setEditEndTime(res.end_time);
+    setEditCapsterId(res.capster_id);
+    setSelectedRes(null);
+  };
+
+  const isOverlapping = (res: CashierReservation) => {
+    const start1 = getMinutesSince10(res.start_time);
+    const end1 = getMinutesSince10(res.end_time);
+    
+    for (const other of reservations) {
+      if (other.reservation_id === res.reservation_id || other.capster_id !== res.capster_id) continue;
+      if (other.reservation_status === "CANCELLED") continue;
+      
+      const start2 = getMinutesSince10(other.start_time);
+      const end2 = getMinutesSince10(other.end_time);
+      
+      if (start1 < end2 && end1 > start2) {
+        return true;
+      }
+    }
+    return false;
   };
 
   const stopQrPolling = () => {
@@ -379,7 +445,16 @@ export default function CashierPage() {
                     </div>
                   ))}
                 </div>
-                <div className="flex flex-1">
+                <div className="flex flex-1 relative">
+                  {/* Current Time Line */}
+                  {selectedDate === toISODate(new Date()) && currentMinutes >= 0 && currentMinutes < HOUR_COUNT * 60 && (
+                    <div 
+                      className="absolute left-0 right-0 z-10 border-t-2 border-red-500 flex items-center pointer-events-none" 
+                      style={{ top: (currentMinutes / 60) * HOUR_HEIGHT }}
+                    >
+                      <div className="absolute left-[-4px] h-2 w-2 rounded-full bg-red-500" />
+                    </div>
+                  )}
                   {workerColumns.map((worker) => {
                     const blocks = reservations.filter((r) => r.capster_id === worker.id);
                     return (
@@ -391,24 +466,29 @@ export default function CashierPage() {
                         ))}
                         {blocks.map((res) => {
                           const top = (getMinutesSince10(res.start_time) / 60) * HOUR_HEIGHT;
-                          const height = (res.duration_minutes / 60) * HOUR_HEIGHT;
+                          const height = Math.max((getMinutesSince10(res.end_time) - getMinutesSince10(res.start_time)) / 60 * HOUR_HEIGHT, 20); // min height 20px
                           const isPaid = paid(res);
                           const displayStatus = getDisplayStatus(res);
                           const isBooked = res.reservation_status === "BOOKED";
+                          const overlapping = isOverlapping(res);
                           
                           return (
                             <div key={res.reservation_id} className={cn("absolute right-1 left-1 overflow-hidden rounded-md border text-left transition", 
                               displayStatus === "BOOKED" && "border-black-200 bg-blue-50 text-blue-900", 
                               displayStatus === "WALK IN" && "border-black-200 bg-green-50 text-green-900", 
                               displayStatus === "COMPLETED" && "border-white bg-black text-white", 
-                              displayStatus === "CANCELLED" && "border-black-200 bg-red-50 text-red-500 opacity-60 line-through"
-                            )} style={{ top, height }}>
+                              displayStatus === "CANCELLED" && "border-black-200 bg-red-50 text-red-500 opacity-60 line-through",
+                              overlapping && "ring-2 ring-red-500 shadow-md"
+                            )} style={{ top, height, zIndex: overlapping ? 5 : 1 }}>
                               <div className="flex h-full flex-col p-1.5">
                                 <div className="flex-1 cursor-pointer" onClick={() => setSelectedRes(res)}>
-                                  <div className="truncate text-[11px] font-bold">
-                                    {res.customer_name} <span className="font-medium opacity-70">({displayStatus})</span>
+                                  <div className="flex items-center gap-1">
+                                    <div className="truncate text-[11px] font-bold">
+                                      {res.customer_name} <span className="font-medium opacity-70">({displayStatus})</span>
+                                    </div>
+                                    {overlapping && <Icon name="info" className="h-3 w-3 text-red-500 shrink-0" />}
                                   </div>
-                                  {height >= 40 && <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">{res.start_time} • {res.service_names}</div>}
+                                  {height >= 40 && <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">{res.start_time} - {res.end_time} • {res.service_names}</div>}
                                   {height >= 54 && <div className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", (isPaid && displayStatus === "COMPLETED") ? "bg-white/20 text-white" : "border border-current opacity-70")}>{isPaid ? "Lunas" : "Belum Bayar"}</div>}
                                 </div>
                                 {isBooked && height >= 70 && (
@@ -479,6 +559,9 @@ export default function CashierPage() {
             </div>
             <div className="z-10 shrink-0 bg-white px-6 pt-4 pb-6 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
               <div className="flex flex-col gap-2.5">
+                {selectedRes.reservation_status === "BOOKED" && (
+                  <PrimaryButton onClick={() => openEditSchedule(selectedRes)}>Edit Schedule</PrimaryButton>
+                )}
                 <SecondaryButton onClick={() => setSelectedRes(null)}>Close</SecondaryButton>
               </div>
             </div>
@@ -657,6 +740,60 @@ export default function CashierPage() {
             <div className="w-full mt-4">
               <PrimaryButton className="w-full" onClick={() => setQrisSuccessRes(null)}>
                 Tutup
+              </PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
+      {editingSchedule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setEditingSchedule(null)} />
+          <div className="relative flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-white p-6 shadow-xl">
+            <div className="flex w-full items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-black">Edit Schedule</h2>
+              <button onClick={() => setEditingSchedule(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">
+                <Icon name="close" className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-bold text-gray-600 mb-1 block">Capster</label>
+                <select 
+                  value={editCapsterId} 
+                  onChange={(e) => setEditCapsterId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                >
+                  {workerColumns.map((w) => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-600 mb-1 block">Start Time</label>
+                  <input 
+                    type="time" 
+                    value={editStartTime} 
+                    onChange={(e) => setEditStartTime(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-600 mb-1 block">End Time</label>
+                  <input 
+                    type="time" 
+                    value={editEndTime} 
+                    onChange={(e) => setEditEndTime(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-2">
+              <PrimaryButton className="w-full" disabled={editLoading} onClick={handleSaveSchedule}>
+                {editLoading ? "Menyimpan..." : "Simpan Perubahan"}
               </PrimaryButton>
             </div>
           </div>

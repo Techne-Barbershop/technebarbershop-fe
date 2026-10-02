@@ -25,6 +25,7 @@ export default function WalkinCheckoutPage() {
   const capsterId = params.get("capster") ?? "";
   const date = params.get("date") ?? "";
   const time = params.get("time") ?? "";
+  const endTime = params.get("endTime") ?? "";
 
   const [services, setServices] = useState<Service[]>([]);
   const [capsterName, setCapsterName] = useState("");
@@ -78,11 +79,11 @@ export default function WalkinCheckoutPage() {
   const selectedServices = services.filter((s) => serviceIds.includes(s.service_id));
   const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
 
-  const reservationEnd = time ? (() => {
+  const reservationEnd = endTime || (time ? (() => {
     const [h, m] = time.split(":").map(Number);
     const t = h * 60 + m + totalDuration;
     return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
-  })() : "";
+  })() : "");
 
   const handleConfirm = async () => {
     setSubmitting(true);
@@ -94,6 +95,7 @@ export default function WalkinCheckoutPage() {
           capster_id: capsterId,
           booking_date: date,
           start_time: time,
+          end_time: endTime || undefined,
           customer_email: customerEmail.trim() || undefined,
         },
       });

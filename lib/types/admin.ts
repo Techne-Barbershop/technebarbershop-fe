@@ -239,6 +239,7 @@ export interface WorkerReservation {
   capster_id: string;
   booking_date: string;
   start_time: string;
+  end_time: string;
   duration_minutes: number;
   status: WorkerReservationStatus;
   notes: string;
@@ -262,6 +263,7 @@ export interface CashierReservation {
   capster_name: string;
   booking_date: string;
   start_time: string;
+  end_time: string;
   duration_minutes: number;
   reservation_status: WorkerReservationStatus;
   notes: string;

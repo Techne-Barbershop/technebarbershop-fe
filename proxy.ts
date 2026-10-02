@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 // Secret key matching the Go backend.
-const secretKey = new TextEncoder().encode(process.env.JWT_SECRET || 'rahasia123');
+const secretKey = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function proxy(request: NextRequest) {
   // 1. Ambil cookie token
