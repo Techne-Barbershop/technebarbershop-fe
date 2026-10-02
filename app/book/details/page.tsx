@@ -111,7 +111,10 @@ export default function UserDetailsPage() {
       const res = await fetch("http://localhost:8080/api/auth/customer/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: values.email.trim() }),
+        body: JSON.stringify({
+          email: values.email.trim(),
+          phone: values.phone.trim(),
+        }),
       });
       
       const data = await res.json();

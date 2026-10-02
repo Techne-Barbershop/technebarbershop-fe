@@ -188,6 +188,17 @@ export default function CashierPage() {
     }
   };
 
+  const handleSendReceipt = async (res: CashierReservation) => {
+    try {
+      await (await import("@/lib/api")).api(`/api/cashier/reservations/${res.reservation_id}/send-receipt`, {
+        method: "POST",
+      });
+      window.alert("Struk berhasil dikirim ke WhatsApp customer");
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Gagal mengirim struk");
+    }
+  };
+
   const handleSaveSchedule = async () => {
     if (!editingSchedule) return;
     setEditLoading(true);
@@ -559,6 +570,9 @@ export default function CashierPage() {
             </div>
             <div className="z-10 shrink-0 bg-white px-6 pt-4 pb-6 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
               <div className="flex flex-col gap-2.5">
+                {paid(selectedRes) && selectedRes.reservation_status === "COMPLETED" && (
+                  <SecondaryButton onClick={() => handleSendReceipt(selectedRes)}>Kirim Struk WhatsApp</SecondaryButton>
+                )}
                 {selectedRes.reservation_status === "BOOKED" && (
                   <PrimaryButton onClick={() => openEditSchedule(selectedRes)}>Edit Schedule</PrimaryButton>
                 )}

@@ -37,7 +37,10 @@ export default function OTPVerificationPage() {
       const res = await fetch("http://localhost:8080/api/auth/customer/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: state.user?.email }),
+        body: JSON.stringify({
+          email: state.user?.email,
+          phone: state.user?.phone,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -88,9 +91,9 @@ export default function OTPVerificationPage() {
       <div className="flex items-center gap-4">
         <BackButton href="/book/details" />
         <div>
-          <h1 className="text-[22px] font-bold text-ink">Verify Email</h1>
+          <h1 className="text-[22px] font-bold text-ink">Verify Your Number</h1>
           <p className="text-[13px] text-graphite">
-            We sent a 6-digit code to {state.user?.email}
+            We sent a 6-digit code to your WhatsApp at {state.user?.phone}
           </p>
         </div>
       </div>
