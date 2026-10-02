@@ -144,6 +144,39 @@ export default function PaymentMethodPage() {
       </div>
 
       <div className="mt-6 flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => setSelectedId("counter")}
+          className={cn(
+            "flex items-center gap-4 rounded-2xl border bg-paper p-4 text-left transition active:bg-mist",
+            selectedId === "counter"
+              ? "border-ink ring-2 ring-ink ring-offset-1"
+              : "border-line",
+          )}
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-mist text-ink">
+            <Icon name="box" className="h-5.5 w-5.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-bold text-ink">
+              Bayar di Tempat
+            </div>
+            <div className="mt-0.5 text-[12.5px] leading-relaxed text-graphite">
+              Selesaikan pembayaran tunai atau non-tunai langsung di kasir counter.
+            </div>
+          </div>
+          <div
+            className={cn(
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition",
+              selectedId === "counter"
+                ? "border-ink bg-ink text-paper"
+                : "border-line text-transparent",
+            )}
+          >
+            <Icon name="check" className="h-3.5 w-3.5" />
+          </div>
+        </button>
+
         {PAYMENT_METHODS.map((method) => {
           const isSelected = selectedId === method.id;
           return (
@@ -182,39 +215,6 @@ export default function PaymentMethodPage() {
             </button>
           );
         })}
-
-        <button
-          type="button"
-          onClick={() => setSelectedId("counter")}
-          className={cn(
-            "flex items-center gap-4 rounded-2xl border bg-paper p-4 text-left transition active:bg-mist",
-            selectedId === "counter"
-              ? "border-ink ring-2 ring-ink ring-offset-1"
-              : "border-line",
-          )}
-        >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-mist text-ink">
-            <Icon name="box" className="h-5.5 w-5.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-bold text-ink">
-              Bayar di Tempat
-            </div>
-            <div className="mt-0.5 text-[12.5px] leading-relaxed text-graphite">
-              Selesaikan pembayaran tunai atau non-tunai langsung di kasir counter.
-            </div>
-          </div>
-          <div
-            className={cn(
-              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition",
-              selectedId === "counter"
-                ? "border-ink bg-ink text-paper"
-                : "border-line text-transparent",
-            )}
-          >
-            <Icon name="check" className="h-3.5 w-3.5" />
-          </div>
-        </button>
       </div>
 
       <BottomBar>

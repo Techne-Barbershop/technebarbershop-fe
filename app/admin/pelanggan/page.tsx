@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { useApiPath } from "@/lib/useApi";
 import type { CustomersResponse } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
+import { formatDateDDMMYYYY } from "@/lib/utils/format";
 
 const ROWS_PER_PAGE = 6;
 
@@ -14,7 +15,7 @@ function formatDate(value: string): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  return formatDateDDMMYYYY(date);
 }
 
 export default function PelangganPage() {

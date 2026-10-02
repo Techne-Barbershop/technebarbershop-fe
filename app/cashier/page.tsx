@@ -8,7 +8,7 @@ import type { CashierReservation, CashierReservationsResponse, WorkerReservation
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
-import { formatDuration, formatPrice } from "@/lib/utils/format";
+import { formatDuration, formatPrice, formatDateDDMMYYYY } from "@/lib/utils/format";
 
 const TABS: { id: string; label: string }[] = [
   { id: "booked", label: "Booked" },
@@ -43,7 +43,7 @@ const isWalkIn = (res: CashierReservation) =>
   res.customer_id === "CUS-WALKIN" || res.customer_name === "WALK IN" || res.notes === "WALK IN";
 
 export default function CashierPage() {
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
   const [selectedDate, setSelectedDate] = useState<string>(toISODate(new Date()));
   const [activeTab, setActiveTab] = useState("booked");
   const [selectedRes, setSelectedRes] = useState<CashierReservation | null>(null);
@@ -394,20 +394,38 @@ export default function CashierPage() {
                           const height = (res.duration_minutes / 60) * HOUR_HEIGHT;
                           const isPaid = paid(res);
                           const displayStatus = getDisplayStatus(res);
+                          const isBooked = res.reservation_status === "BOOKED";
                           
                           return (
-                            <button key={res.reservation_id} onClick={() => setSelectedRes(res)} className={cn("absolute right-1 left-1 overflow-hidden rounded-md border p-1.5 text-left transition active:scale-[0.98]", 
-                              displayStatus === "BOOKED" && "border-black-200 bg-blue-50 text-blue-900 hover:bg-blue-100", 
-                              displayStatus === "WALK IN" && "border-black-200 bg-green-50 text-green-900 hover:bg-green-100", 
-                              displayStatus === "COMPLETED" && "border-white bg-black text-white hover:bg-gray-900", 
-                              displayStatus === "CANCELLED" && "border-black-200 bg-red-50 text-red-500 opacity-60 line-through hover:bg-red-100"
+                            <div key={res.reservation_id} className={cn("absolute right-1 left-1 overflow-hidden rounded-md border text-left transition", 
+                              displayStatus === "BOOKED" && "border-black-200 bg-blue-50 text-blue-900", 
+                              displayStatus === "WALK IN" && "border-black-200 bg-green-50 text-green-900", 
+                              displayStatus === "COMPLETED" && "border-white bg-black text-white", 
+                              displayStatus === "CANCELLED" && "border-black-200 bg-red-50 text-red-500 opacity-60 line-through"
                             )} style={{ top, height }}>
-                              <div className="truncate text-[11px] font-bold">
-                                {res.customer_name} <span className="font-medium opacity-70">({displayStatus})</span>
+                              <div className="flex h-full flex-col p-1.5">
+                                <div className="flex-1 cursor-pointer" onClick={() => setSelectedRes(res)}>
+                                  <div className="truncate text-[11px] font-bold">
+                                    {res.customer_name} <span className="font-medium opacity-70">({displayStatus})</span>
+                                  </div>
+                                  {height >= 40 && <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">{res.start_time} • {res.service_names}</div>}
+                                  {height >= 54 && <div className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", (isPaid && displayStatus === "COMPLETED") ? "bg-white/20 text-white" : "border border-current opacity-70")}>{isPaid ? "Lunas" : "Belum Bayar"}</div>}
+                                </div>
+                                {isBooked && height >= 70 && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setActionRes(res); }}
+                                    className={cn(
+                                      "mt-1 w-full rounded px-1.5 py-0.5 text-[9px] font-bold transition active:scale-95",
+                                      isPaid
+                                        ? "bg-white text-black hover:bg-gray-100"
+                                        : "bg-black text-white hover:bg-gray-800"
+                                    )}
+                                  >
+                                    {isPaid ? "Ubah Status" : "Bayar"}
+                                  </button>
+                                )}
                               </div>
-                              {height >= 40 && <div className="mt-0.5 truncate text-[10px] font-medium opacity-80">{res.start_time} • {res.service_names}</div>}
-                              {height >= 54 && <div className={cn("mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", (isPaid && displayStatus === "COMPLETED") ? "bg-white/20 text-white" : "border border-current opacity-70")}>{isPaid ? "Lunas" : "Belum Bayar"}</div>}
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -448,7 +466,7 @@ export default function CashierPage() {
                   <div>
                     <div className="mb-1 text-[11px] font-bold tracking-widest text-gray-400 uppercase">Time & Date</div>
                     <div className="flex items-center gap-2 text-[15px] font-semibold text-black"><Icon name="clock" className="h-4 w-4" />{selectedRes.start_time} ({formatDuration(selectedRes.duration_minutes)})</div>
-                    <div className="ml-6 mt-0.5 text-sm text-gray-500">{new Date(selectedRes.booking_date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
+                    <div className="ml-6 mt-0.5 text-sm text-gray-500">{formatDateDDMMYYYY(selectedRes.booking_date)}</div>
                   </div>
                   <div><div className="mb-1 text-[11px] font-bold tracking-widest text-gray-400 uppercase">Service</div><div className="text-[15px] font-semibold text-black">{selectedRes.service_names}</div><div className="ml-6 mt-0.5 text-sm text-gray-500">{formatPrice(Number(selectedRes.service_total))}</div></div>
                   <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">

@@ -5,7 +5,7 @@ import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { useApiPath } from "@/lib/useApi";
 import type { CashierReservation, CashierReservationsResponse, WorkerReservationStatus } from "@/lib/types/admin";
-import { formatDuration, formatPrice } from "@/lib/utils/format";
+import { formatDuration, formatPrice, formatDateDDMMYYYY } from "@/lib/utils/format";
 import { SecondaryButton } from "@/components/Buttons";
 
 const HOUR_HEIGHT = 140;
@@ -252,7 +252,7 @@ export default function KalenderPage() {
                   <div>
                     <div className="mb-1 text-[11px] font-bold tracking-widest text-gray-400 uppercase">Time & Date</div>
                     <div className="flex items-center gap-2 text-[15px] font-semibold text-black"><Icon name="clock" className="h-4 w-4" />{selectedRes.start_time} ({formatDuration(selectedRes.duration_minutes)})</div>
-                    <div className="ml-6 mt-0.5 text-sm text-gray-500">{new Date(selectedRes.booking_date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
+                    <div className="ml-6 mt-0.5 text-sm text-gray-500">{formatDateDDMMYYYY(selectedRes.booking_date)}</div>
                   </div>
                   <div><div className="mb-1 text-[11px] font-bold tracking-widest text-gray-400 uppercase">Service</div><div className="text-[15px] font-semibold text-black">{selectedRes.service_names || "-"}</div><div className="ml-6 mt-0.5 text-sm text-gray-500">{formatPrice(Number(selectedRes.service_total || 0))}</div></div>
                   <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">

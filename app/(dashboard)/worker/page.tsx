@@ -11,7 +11,7 @@ import type {
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
-import { formatDuration, formatPrice } from "@/lib/utils/format";
+import { formatDuration, formatPrice, formatDateDDMMYYYY } from "@/lib/utils/format";
 
 const TABS: { id: WorkerReservationStatus; label: string }[] = [
   { id: "BOOKED", label: "Booked" },
@@ -464,15 +464,7 @@ export default function WorkerDashboardPage() {
                       {formatDuration(selectedRes.duration_minutes)})
                     </div>
                     <div className="text-[13px] text-graphite mt-0.5 ml-6">
-                      {new Date(selectedRes.booking_date).toLocaleDateString(
-                        "en-US",
-                        {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        },
-                      )}
+                      {formatDateDDMMYYYY(selectedRes.booking_date)}
                     </div>
                   </div>
 

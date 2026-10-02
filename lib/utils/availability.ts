@@ -63,8 +63,10 @@ export function todayISO(): string {
 
 export function formatDateID(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${day} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
 }
 
 

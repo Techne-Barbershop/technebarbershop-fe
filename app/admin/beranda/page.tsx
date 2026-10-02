@@ -6,7 +6,7 @@ import type { DashboardStats } from "@/lib/types/admin";
 import { api } from "@/lib/api";
 import { useEffect, useState } from "react";
 import type { Reservation } from "@/lib/types/admin";
-import { addMinutes } from "@/lib/utils/format";
+import { addMinutes, formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from "@/lib/utils/format";
 
 function formatRupiah(value: string): string {
   const num = Number(value);
@@ -34,32 +34,11 @@ function todayISO(): string {
 }
 
 function formatDateTime(dateString: string) {
-  const date = new Date(dateString);
-
-  return `${date.toLocaleDateString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })}, ${date.toLocaleTimeString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })}`;
+  return formatDateTimeDDMMYYYY(new Date(dateString));
 }
 
 function formatDate(dateString: string) {
-  const date = new Date(dateString);
-
-  return `${date.toLocaleDateString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })}`;
+  return formatDateDDMMYYYY(new Date(dateString));
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -94,7 +73,7 @@ export default function BerandaPage() {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const iso = localISODate(d);
-      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      const label = formatDateDDMMYYYY(d).slice(0, 5);
       last7Days.push({ date: iso, label, revenue: 0 });
     }
     const startDate = last7Days[0].date;
@@ -217,7 +196,7 @@ export default function BerandaPage() {
 
               {chartData.map((data, index) => {
                 const heightPercentage = Math.min((data.revenue / 1200000) * 100, 100);
-                const fullDateLabel = new Date(data.date).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" });
+                const fullDateLabel = formatDateDDMMYYYY(new Date(data.date));
                 return (
                   <div key={index} className="group relative z-10 flex h-full flex-1 flex-col items-center justify-end">
                     {/* Tooltip Popup */}

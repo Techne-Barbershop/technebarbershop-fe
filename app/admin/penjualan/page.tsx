@@ -9,7 +9,7 @@ import { api, unwrap } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { Transaction, TransactionsResponse, ItemSalesResponse } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
-import { addMinutes } from "@/lib/utils/format";
+import { addMinutes, formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from "@/lib/utils/format";
 
 interface ProductSale {
   id: string;
@@ -31,32 +31,11 @@ function formatRupiah(value: string | number): string {
 }
 
 function formatDateTime(dateString: string) {
-  const date = new Date(dateString);
-
-  return `${date.toLocaleDateString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })}, ${date.toLocaleTimeString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })}`;
+  return formatDateTimeDDMMYYYY(new Date(dateString));
 }
 
 function formatDate(dateString: string) {
-  const date = new Date(dateString);
-
-  return `${date.toLocaleDateString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  })}`;
+  return formatDateDDMMYYYY(new Date(dateString));
 }
 
 function getPaginationArray(currentPage: number, totalPages: number) {

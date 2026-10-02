@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { useApiPath } from "@/lib/useApi";
 import type { Staff, StaffResponse, StaffLeave, StaffLeavesResponse } from "@/lib/types/admin";
 import { cn } from "@/lib/utils/cn";
+import { formatDateDDMMYYYY } from "@/lib/utils/format";
 import Modal from "@/components/admin/Modal";
 import ImageUpload from "@/components/admin/ImageUpload";
 
@@ -476,7 +477,7 @@ export default function StafPage() {
                   {weekDates.map((date, index) => (
                     <th key={index} className="border-l border-gray-100 px-3 py-3 text-center text-xs text-gray-500 uppercase">
                       <div className="font-bold">{DAYS[index]}</div>
-                      <div className="text-[10px] font-medium mt-1">{date.toLocaleDateString("id-ID", { day: 'numeric', month: 'short' })}</div>
+                      <div className="text-[10px] font-medium mt-1">{formatDateDDMMYYYY(date).slice(0, 5)}</div>
                     </th>
                   ))}
                 </tr>
@@ -589,7 +590,7 @@ export default function StafPage() {
                               {(() => {
                                 const [y, m, d] = leave.leave_date.split('-');
                                 const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
-                                return dateObj.toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' });
+                                return formatDateDDMMYYYY(dateObj);
                               })()}
                             </span>
                           </span>

@@ -45,3 +45,18 @@ export function addMinutes(time: string, minutes: number): string {
   const nextMins = total % 60;
   return `${String(nextHours).padStart(2, "0")}:${String(nextMins).padStart(2, "0")}`;
 }
+
+export function formatDateDDMMYYYY(dateInput: string | Date): string {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+export function formatDateTimeDDMMYYYY(dateInput: string | Date): string {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  return `${formatDateDDMMYYYY(date)} ${hh}:${mi}`;
+}

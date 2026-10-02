@@ -6,9 +6,16 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { api } from "@/lib/api";
-import { formatDuration, formatPrice } from "@/lib/utils/format";
+import { formatDuration, formatPrice, formatDateDDMMYYYY } from "@/lib/utils/format";
 
 interface Service { service_id: string; name: string; duration_minutes: number; price: string }
+
+interface CustomerLookup {
+  customer_id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
 
 export default function WalkinCheckoutPage() {
   const router = useRouter();
@@ -22,6 +29,10 @@ export default function WalkinCheckoutPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [capsterName, setCapsterName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerLookup, setCustomerLookup] = useState<CustomerLookup | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState("");
 
   useEffect(() => {
     api<{ data: { categories: { services: Service[] }[] } }>("/api/categories").then((r) => {
@@ -33,6 +44,25 @@ export default function WalkinCheckoutPage() {
       if (c) setCapsterName(c.name);
     });
   }, [capsterId]);
+
+  const handleEmailLookup = async (email: string) => {
+    if (!email.trim()) {
+      setCustomerLookup(null);
+      setLookupError("");
+      return;
+    }
+    setLookupLoading(true);
+    setLookupError("");
+    try {
+      const res = await api<{ data: CustomerLookup }>(`/api/cashier/customers/lookup?email=${encodeURIComponent(email)}`);
+      setCustomerLookup(res.data);
+    } catch {
+      setCustomerLookup(null);
+      setLookupError("Customer tidak ditemukan dengan email tersebut");
+    } finally {
+      setLookupLoading(false);
+    }
+  };
 
   if (!serviceIds.length || !date || !time || !capsterId) {
     return (
@@ -59,7 +89,13 @@ export default function WalkinCheckoutPage() {
     try {
       await api("/api/cashier/walkin", {
         method: "POST",
-        body: { service_ids: serviceIds, capster_id: capsterId, booking_date: date, start_time: time },
+        body: {
+          service_ids: serviceIds,
+          capster_id: capsterId,
+          booking_date: date,
+          start_time: time,
+          customer_email: customerEmail.trim() || undefined,
+        },
       });
       router.push("/cashier");
     } catch (err) {
@@ -99,10 +135,55 @@ export default function WalkinCheckoutPage() {
 
         <div className="flex flex-col gap-4">
           <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Customer</div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500">Email Customer (opsional)</label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    onBlur={() => handleEmailLookup(customerEmail)}
+                    placeholder="email@email.com"
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-black outline-none focus:border-black"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleEmailLookup(customerEmail)}
+                    disabled={lookupLoading}
+                    className={cn(
+                      "rounded-lg px-3 py-2 text-xs font-bold transition",
+                      lookupLoading ? "bg-gray-100 text-gray-400" : "bg-black text-white active:scale-95"
+                    )}
+                  >
+                    {lookupLoading ? "..." : "Cari"}
+                  </button>
+                </div>
+              </div>
+              {lookupError && (
+                <p className="text-xs text-red-500">{lookupError}</p>
+              )}
+              {customerLookup && (
+                <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+                  <div className="flex items-center gap-2">
+                    <Icon name="check" className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-bold text-black">{customerLookup.name}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-600">{customerLookup.phone} · {customerLookup.email}</div>
+                </div>
+              )}
+              {!customerLookup && !lookupError && customerEmail && !lookupLoading && (
+                <p className="text-xs text-gray-400">Customer baru akan digunakan (walk-in placeholder)</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
             <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Detail</div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-gray-500">Capster</span><span className="font-semibold text-black">{capsterName || capsterId}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Tanggal</span><span className="font-semibold text-black">{date}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Tanggal</span><span className="font-semibold text-black">{formatDateDDMMYYYY(date)}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Waktu</span><span className="font-semibold text-black">{time} – {reservationEnd}</span></div>
             </div>
           </div>
