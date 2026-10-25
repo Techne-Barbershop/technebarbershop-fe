@@ -266,7 +266,7 @@ export default function PaymentInstructionsPage() {
                 </h2>
                 <p className="mt-2 text-[13px] leading-relaxed text-graphite">
                   Your payment was received. We&apos;ve sent your
-                  booking details to {state.user?.email ?? "your email"}. See
+                  booking details to {state.user?.phone ?? "your phone"}. See
                   you at {STORE.name}!
                 </p>
                 <PrimaryButton onClick={handleDone} className="mt-6">

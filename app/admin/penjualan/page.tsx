@@ -239,8 +239,7 @@ export default function PenjualanPage() {
                           <td className="px-5 py-3 whitespace-nowrap">
                             <div className="flex flex-col">
                               <span className="font-semibold text-black">{trx.customer_name}</span>
-                              <span className="text-xs text-gray-400">{trx.customer_phone}</span>
-                              <span className="text-xs text-gray-400">{trx.customer_email}</span>
+
                             </div>
                           </td>
                           <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{trx.capster_name}</td>
@@ -328,8 +327,7 @@ export default function PenjualanPage() {
                           <td className="px-5 py-3 whitespace-nowrap">
                             <div className="flex flex-col">
                               <span className="font-semibold text-black">{item.trx.customer_name}</span>
-                              <span className="text-xs text-gray-400">{item.trx.customer_phone}</span>
-                              <span className="text-xs text-gray-400">{item.trx.customer_email}</span>
+
                             </div>
                           </td>
                           <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{item.trx.capster_name}</td>
@@ -508,7 +506,7 @@ export default function PenjualanPage() {
               <span className="text-xs font-bold uppercase text-gray-500">Customer</span>
               <div className="text-right">
                 <div className="font-semibold text-black">{selectedTransaction.customer_name}</div>
-                <div className="text-xs text-gray-400">{selectedTransaction.customer_phone} • {selectedTransaction.customer_email}</div>
+                <div className="text-xs text-gray-400">{selectedTransaction.customer_phone}</div>
                 <div className="text-[10px] text-gray-300">ID: {selectedTransaction.customer_id}</div>
               </div>
             </div>

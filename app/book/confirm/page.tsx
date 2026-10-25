@@ -63,7 +63,6 @@ export default function BookingConfirmationPage() {
     { label: "Time", value: `${time} – ${reservationEnd ?? ""}` },
     { label: "Name", value: user.name },
     { label: "Phone", value: user.phone, copy: true },
-    { label: "Email", value: user.email },
     { label: "Store Location", value: STORE.location },
     { label: "Hair Artist", value: artist.name },
   ];

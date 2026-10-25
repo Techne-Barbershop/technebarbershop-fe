@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils/cn";
 interface FormValues {
   name: string;
   phone: string;
-  email: string;
 }
 
 type FieldKey = keyof FormValues;
@@ -30,11 +29,6 @@ function validate(values: FormValues): Errors {
   } else if (!/^(\+?62|0)[0-9]{8,13}$/.test(phone)) {
     errors.phone = "Enter a valid phone number, e.g. 0812 3456 7890.";
   }
-  if (!values.email.trim()) {
-    errors.email = "Please enter your email address.";
-  } else if (!EMAIL_RE.test(values.email.trim())) {
-    errors.email = "Enter a valid email address.";
-  }
   return errors;
 }
 
@@ -45,13 +39,12 @@ export default function UserDetailsPage() {
   const [values, setValues] = useState<FormValues>({
     name: state.user?.name ?? "",
     phone: state.user?.phone ?? "",
-    email: state.user?.email ?? "",
   });
   const [errors, setErrors] = useState<Errors>({});
   const [submitted, setSubmitted] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [sessionCustomer, setSessionCustomer] = useState<{name: string; phone: string; email: string} | null>(null);
+  const [sessionCustomer, setSessionCustomer] = useState<{name: string; phone: string} | null>(null);
   const [isSessionChecking, setIsSessionChecking] = useState(true);
 
   useEffect(() => {
@@ -89,7 +82,6 @@ export default function UserDetailsPage() {
       payload: {
         name: sessionCustomer.name,
         phone: sessionCustomer.phone,
-        email: sessionCustomer.email,
       },
     });
     router.push("/book/confirm");
@@ -112,14 +104,13 @@ export default function UserDetailsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: values.email.trim(),
           phone: values.phone.trim(),
         }),
       });
       
       const data = await res.json();
       if (!res.ok) {
-        setErrors({ email: data.error || "Failed to send OTP" });
+        setErrors({ phone: data.error || "Failed to send OTP" });
         setLoading(false);
         return;
       }
@@ -129,12 +120,11 @@ export default function UserDetailsPage() {
         payload: {
           name: values.name.trim(),
           phone: values.phone.trim(),
-          email: values.email.trim(),
         },
       });
       router.push("/book/otp");
     } catch (err) {
-      setErrors({ email: "Network error" });
+      setErrors({ phone: "Network error" });
       setLoading(false);
     }
   };
@@ -163,14 +153,7 @@ export default function UserDetailsPage() {
       autoComplete: "tel",
       placeholder: "0812 3456 7890",
     },
-    {
-      key: "email",
-      label: "Email Address",
-      type: "email",
-      inputMode: "email",
-      autoComplete: "email",
-      placeholder: "you@example.com",
-    },
+
   ];
 
   if (isSessionChecking) {
@@ -198,7 +181,6 @@ export default function UserDetailsPage() {
           <div className="rounded-2xl border border-line bg-paper p-5">
             <div className="text-[15px] font-bold text-ink">{sessionCustomer.name}</div>
             <div className="mt-1 text-[13px] text-graphite">{sessionCustomer.phone}</div>
-            <div className="text-[13px] text-graphite">{sessionCustomer.email}</div>
           </div>
           
           <button 

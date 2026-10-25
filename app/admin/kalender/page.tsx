@@ -246,7 +246,6 @@ export default function KalenderPage() {
                     <div className="mb-1 text-[11px] font-bold tracking-widest text-gray-400 uppercase">Customer</div>
                     <div className="text-[15px] font-semibold text-black">{selectedRes.customer_name}</div>
                     <div className="mt-0.5 flex gap-3 text-sm text-gray-500"><span className="flex items-center gap-1"><Icon name="phone" className="h-3.5 w-3.5" /> {selectedRes.customer_phone || "-"}</span></div>
-                    <div className="mt-0.5 flex gap-3 text-sm text-gray-500"><span className="flex items-center gap-1"><Icon name="mail" className="h-3.5 w-3.5" /> {selectedRes.customer_email || "-"}</span></div>
                   </div>
                   <div><div className="mb-1 text-[11px] font-bold tracking-widest text-gray-400 uppercase">Worker</div><div className="text-[15px] font-semibold text-black">{selectedRes.capster_name}</div></div>
                   <div>

@@ -17,7 +17,7 @@ export default function OTPVerificationPage() {
   const [resendCooldown, setResendCooldown] = useState(60);
 
   useEffect(() => {
-    if (!state.user || !state.user.email) {
+    if (!state.user || !state.user.phone) {
       router.push("/book/details");
     }
   }, [state.user, router]);
@@ -38,7 +38,6 @@ export default function OTPVerificationPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: state.user?.email,
           phone: state.user?.phone,
         }),
       });
@@ -64,7 +63,6 @@ export default function OTPVerificationPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: state.user?.email,
           otp: otp,
           name: state.user?.name,
           phone: state.user?.phone,

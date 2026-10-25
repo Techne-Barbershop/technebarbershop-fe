@@ -10,7 +10,7 @@ import { useBooking } from "@/context/BookingContext";
 export default function LandingPage() {
   const router = useRouter();
   const { dispatch } = useBooking();
-  const [customer, setCustomer] = useState<{name: string; phone: string; email: string} | null>(null);
+  const [customer, setCustomer] = useState<{name: string; phone: string} | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +41,6 @@ export default function LandingPage() {
         payload: {
           name: customer.name,
           phone: customer.phone,
-          email: customer.email,
         },
       });
     }

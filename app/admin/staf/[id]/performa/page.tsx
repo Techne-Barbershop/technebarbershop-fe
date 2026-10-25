@@ -22,7 +22,6 @@ interface Pagination {
 interface Reservation {
   reservation_id: string;
   customer_name: string;
-  customer_email: string;
   customer_phone: string;
   service_names: string;
   booking_date: string;
@@ -202,7 +201,6 @@ export default function CapsterPerformancePage() {
                         </td>
                         <td className="px-5 py-3">
                           <p className="font-semibold text-black">{res.customer_name || "-"}</p>
-                          <p className="text-xs text-gray-500">{res.customer_email || "-"}</p>
                           <p className="text-xs text-gray-500">{res.customer_phone || "-"}</p>
                         </td>
                         <td className="px-5 py-3 font-medium text-gray-800">

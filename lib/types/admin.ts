@@ -134,7 +134,6 @@ export interface Transaction {
   customer_id: string;
   customer_name: string;
   customer_phone: string;
-  customer_email: string;
   capster_id: string;
   capster_name: string;
   booking_date: string;
@@ -232,7 +231,6 @@ export interface WorkerReservation {
   customer_id: string;
   customer_name: string;
   customer_phone: string;
-  customer_email: string;
   service_ids: string[];
   service_names: string;
   service_total: string;
@@ -254,7 +252,6 @@ export interface CashierReservation {
   customer_id: string;
   customer_name: string;
   customer_phone: string;
-  customer_email: string;
   service_names: string;
   service_ids: string;
   service_total: string;

@@ -446,12 +446,7 @@ export default function WorkerDashboardPage() {
                         {selectedRes.customer_phone}
                       </span>
                     </div>
-                    <div className="text-[13px] text-graphite mt-0.5 flex gap-3">
-                      <span className="flex items-center gap-1">
-                        <Icon name="mail" className="w-3.5 h-3.5" />{" "}
-                        {selectedRes.customer_email}
-                      </span>
-                    </div>
+
                   </div>
 
                   <div>

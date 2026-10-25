@@ -30,7 +30,7 @@ export default function WalkinCheckoutPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [capsterName, setCapsterName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [customerLookup, setCustomerLookup] = useState<CustomerLookup | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState("");
@@ -46,8 +46,8 @@ export default function WalkinCheckoutPage() {
     });
   }, [capsterId]);
 
-  const handleEmailLookup = async (email: string) => {
-    if (!email.trim()) {
+  const handlePhoneLookup = async (phone: string) => {
+    if (!phone.trim()) {
       setCustomerLookup(null);
       setLookupError("");
       return;
@@ -55,11 +55,11 @@ export default function WalkinCheckoutPage() {
     setLookupLoading(true);
     setLookupError("");
     try {
-      const res = await api<{ data: CustomerLookup }>(`/api/cashier/customers/lookup?email=${encodeURIComponent(email)}`);
+      const res = await api<{ data: CustomerLookup }>(`/api/cashier/customers/lookup?phone=${encodeURIComponent(phone)}`);
       setCustomerLookup(res.data);
     } catch {
       setCustomerLookup(null);
-      setLookupError("Customer tidak ditemukan dengan email tersebut");
+      setLookupError("Customer tidak ditemukan dengan nomor tersebut");
     } finally {
       setLookupLoading(false);
     }
@@ -96,7 +96,7 @@ export default function WalkinCheckoutPage() {
           booking_date: date,
           start_time: time,
           end_time: endTime || undefined,
-          customer_email: customerEmail.trim() || undefined,
+          customer_phone: customerPhone.trim() || undefined,
         },
       });
       router.push("/cashier");
@@ -140,19 +140,19 @@ export default function WalkinCheckoutPage() {
             <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Customer</div>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-500">Email Customer (opsional)</label>
+                <label className="text-xs font-medium text-gray-500">Nomor HP Customer (opsional)</label>
                 <div className="mt-1 flex gap-2">
                   <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    onBlur={() => handleEmailLookup(customerEmail)}
-                    placeholder="email@email.com"
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    onBlur={() => handlePhoneLookup(customerPhone)}
+                    placeholder="081xxx"
                     className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-black outline-none focus:border-black"
                   />
                   <button
                     type="button"
-                    onClick={() => handleEmailLookup(customerEmail)}
+                    onClick={() => handlePhoneLookup(customerPhone)}
                     disabled={lookupLoading}
                     className={cn(
                       "rounded-lg px-3 py-2 text-xs font-bold transition",
@@ -172,10 +172,10 @@ export default function WalkinCheckoutPage() {
                     <Icon name="check" className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-bold text-black">{customerLookup.name}</span>
                   </div>
-                  <div className="mt-1 text-xs text-gray-600">{customerLookup.phone} · {customerLookup.email}</div>
+                  <div className="mt-1 text-xs text-gray-600">{customerLookup.phone}</div>
                 </div>
               )}
-              {!customerLookup && !lookupError && customerEmail && !lookupLoading && (
+              {!customerLookup && !lookupError && customerPhone && !lookupLoading && (
                 <p className="text-xs text-gray-400">Customer baru akan digunakan (walk-in placeholder)</p>
               )}
             </div>

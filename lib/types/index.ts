@@ -37,7 +37,6 @@ export interface Artist {
 export interface UserDetails {
   name: string;
   phone: string;
-  email: string;
 }
 
 export interface TimeSlot {
@@ -75,7 +74,6 @@ export interface Reservation {
   id: string;
   customerName: string;
   customerPhone: string;
-  customerEmail: string;
   date: string;
   time: string;
   durationMinutes: number;
