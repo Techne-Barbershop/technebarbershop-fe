@@ -38,7 +38,7 @@ export default function ImageUpload({ value, onChange, aspectRatio, label = "Upl
       const formData = new FormData();
       formData.append("image", croppedImageBlob, "upload.jpg");
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
       const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
       const res = await fetch(apiUrl + "/api/admin/upload", {
         method: "POST",

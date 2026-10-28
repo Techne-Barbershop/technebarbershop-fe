@@ -165,7 +165,7 @@ export default function StafPage() {
   const handleDeleteStaff = async (id: string) => {
     if (!confirm("Apakah Anda yakin ingin menghapus staf ini? Semua data jadwal dan libur juga akan terhapus.")) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/staff/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/admin/staff/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${localStorage.getItem("techne_token")}` },
       });
@@ -197,8 +197,8 @@ export default function StafPage() {
     setSaving(true);
     try {
       const url = isEditMode 
-        ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/staff/${selectedStaff!.user_id}`
-        : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/staff`;
+        ? `${process.env.NEXT_PUBLIC_API_URL || ""}/api/admin/staff/${selectedStaff!.user_id}`
+        : `${process.env.NEXT_PUBLIC_API_URL || ""}/api/admin/staff`;
       
       const method = isEditMode ? "PUT" : "POST";
       
@@ -275,7 +275,7 @@ export default function StafPage() {
   const handleDeleteLeave = async (id: string) => {
     if (!confirm("Apakah Anda yakin ingin menghapus jadwal libur ini?")) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/staff/leaves/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/admin/staff/leaves/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${localStorage.getItem("techne_token")}` },
       });
@@ -299,8 +299,8 @@ export default function StafPage() {
     setSaving(true);
     try {
       const url = isEditMode 
-        ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/staff/leaves/${selectedLeave!.leave_id}`
-        : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/admin/staff/leaves`;
+        ? `${process.env.NEXT_PUBLIC_API_URL || ""}/api/admin/staff/leaves/${selectedLeave!.leave_id}`
+        : `${process.env.NEXT_PUBLIC_API_URL || ""}/api/admin/staff/leaves`;
       
       const method = isEditMode ? "PUT" : "POST";
       

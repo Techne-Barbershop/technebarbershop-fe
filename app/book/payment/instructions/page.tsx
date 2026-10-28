@@ -34,7 +34,7 @@ export default function PaymentInstructionsPage() {
     const fetchQR = async () => {
       try {
         const token = localStorage.getItem("customer_token");
-        const res = await fetch(`http://localhost:8080/api/reservations/${state.reservationId}/payment/qris`, {
+        const res = await fetch(`/api/reservations/${state.reservationId}/payment/qris`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -55,7 +55,7 @@ export default function PaymentInstructionsPage() {
     const interval = setInterval(async () => {
       try {
         const token = localStorage.getItem("customer_token");
-        const res = await fetch(`http://localhost:8080/api/reservations/${state.reservationId}`, {
+        const res = await fetch(`/api/reservations/${state.reservationId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const meData = await res.json();
@@ -101,7 +101,7 @@ export default function PaymentInstructionsPage() {
     setCancelling(true);
     try {
       const token = localStorage.getItem("customer_token");
-      await fetch(`http://localhost:8080/api/reservations/${state.reservationId}/cancel`, {
+      await fetch(`/api/reservations/${state.reservationId}/cancel`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
       });

@@ -43,7 +43,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (!artist) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/availability/month?worker_id=${artist.id}&year=${year}&month=${month + 1}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/availability/month?worker_id=${artist.id}&year=${year}&month=${month + 1}`)
       .then((res) => res.json())
       .then((data) => {
         setAvailableDates(data.data?.available_dates || []);
@@ -53,7 +53,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (!artist || !selectedDate) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/availability/day?worker_id=${artist.id}&date=${selectedDate}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/availability/day?worker_id=${artist.id}&date=${selectedDate}`)
       .then((res) => res.json())
       .then((data) => {
         setSlots(data.data?.slots || []);
@@ -127,7 +127,7 @@ export default function SchedulePage() {
     setChecking(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/reservations/check-slot", {
+      const res = await fetch("/api/reservations/check-slot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
