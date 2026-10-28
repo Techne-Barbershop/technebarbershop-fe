@@ -54,7 +54,7 @@ export default function UserDetailsPage() {
       return;
     }
 
-    fetch("http://localhost:8080/api/auth/customer/me", {
+    fetch("/api/auth/customer/me", {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -100,7 +100,7 @@ export default function UserDetailsPage() {
     
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/auth/customer/send-otp", {
+      const res = await fetch("/api/auth/customer/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

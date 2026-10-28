@@ -32,7 +32,7 @@ export default function PaymentMethodPage() {
 
     if (selectedId === "counter") {
       try {
-        const res = await fetch("http://localhost:8080/api/reservations", {
+        const res = await fetch("/api/reservations", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -66,7 +66,7 @@ export default function PaymentMethodPage() {
     if (!method) return;
 
     try {
-      const res = await fetch("http://localhost:8080/api/reservations", {
+      const res = await fetch("/api/reservations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

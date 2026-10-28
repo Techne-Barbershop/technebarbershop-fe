@@ -34,7 +34,7 @@ export default function OTPVerificationPage() {
     if (resendCooldown > 0) return;
     try {
       setResendCooldown(60);
-      const res = await fetch("http://localhost:8080/api/auth/customer/send-otp", {
+      const res = await fetch("/api/auth/customer/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,7 +59,7 @@ export default function OTPVerificationPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/auth/customer/verify-otp", {
+      const res = await fetch("/api/auth/customer/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

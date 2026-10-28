@@ -19,7 +19,7 @@ export default function LandingPage() {
       setLoading(false);
       return;
     }
-    fetch("http://localhost:8080/api/auth/customer/me", {
+    fetch("/api/auth/customer/me", {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
