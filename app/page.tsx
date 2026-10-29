@@ -74,7 +74,7 @@ export default function LandingPage() {
         <div className="mx-auto w-full max-w-md px-5 pb-6">
           <p className="text-sm font-normal text-paper/90">Welcome to</p>
           <h1 className="mt-1.5 text-[44px] leading-[0.95] font-black tracking-tight text-paper uppercase">
-            Techné a tes CICD
+            Techné a
             <br />
             Barbershop
           </h1>
