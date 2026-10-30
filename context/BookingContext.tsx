@@ -10,13 +10,13 @@ import type {
 } from "@/lib/types";
 import type { Service } from "@/lib/types/admin";
 
-const TIMER_SECONDS = 5 * 60;
+const TIMER_SECONDS = 3 * 60;
 
 type Action =
   | { type: "SET_SERVICES"; payload: Service[] }
   | { type: "SET_ARTIST"; payload: Artist }
   | { type: "SET_DATETIME"; payload: { date: string; time: string } }
-  | { type: "SET_USER"; payload: UserDetails }
+  | { type: "SET_USER"; payload: UserDetails | null }
   | { type: "SET_PAYMENT"; payload: PaymentMethod }
   | { type: "SET_RESERVATION"; payload: { id: string; expiresAt: string } }
   | { type: "HYDRATE"; payload: BookingState }
@@ -99,11 +99,21 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   }, [state, isHydrated]);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setTimer((current) => (current > 0 ? current - 1 : 0));
-    }, 1000);
+    if (!state.expiresAt) {
+      setTimer(TIMER_SECONDS);
+      return;
+    }
+
+    const target = new Date(state.expiresAt).getTime();
+    const update = () => {
+      const diff = Math.floor((target - Date.now()) / 1000);
+      setTimer(Math.max(0, diff));
+    };
+
+    update();
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [state.expiresAt]);
 
   const value = useMemo(
     () => ({

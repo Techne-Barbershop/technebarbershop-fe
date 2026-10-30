@@ -29,8 +29,14 @@ export async function proxy(request: NextRequest) {
       }
     }
 
+    if (request.nextUrl.pathname.startsWith('/cashier')) {
+      if (role !== 'CASHIER' && role !== 'ADMIN') {
+        return redirectToLogin();
+      }
+    }
+
     if (request.nextUrl.pathname.startsWith('/worker')) {
-      if (role !== 'CAPSTER' && role !== 'ADMIN') {
+      if (role !== 'CAPSTER') {
         return redirectToLogin();
       }
     }
@@ -48,6 +54,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
+    '/cashier/:path*',
     '/worker/:path*'
   ],
 };

@@ -7,6 +7,7 @@ import BottomBar from "@/components/BottomBar";
 import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
+import { API_URL } from "@/lib/api";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { formatPrice, sumPrices, sumDurations } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
@@ -29,10 +30,17 @@ export default function PaymentMethodPage() {
     setSubmitting(true);
 
     const token = localStorage.getItem("customer_token");
+    if (!token) {
+      dispatch({ type: "SET_USER", payload: null });
+      alert("Sesi Anda telah berakhir. Silakan verifikasi nomor telepon kembali.");
+      setSubmitting(false);
+      router.push("/book/details");
+      return;
+    }
 
     if (selectedId === "counter") {
       try {
-        const res = await fetch("/api/reservations", {
+        const res = await fetch(`${API_URL}/api/reservations`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -48,6 +56,15 @@ export default function PaymentMethodPage() {
             pay_at_counter: true,
           }),
         });
+
+        if (res.status === 401) {
+          localStorage.removeItem("customer_token");
+          dispatch({ type: "SET_USER", payload: null });
+          alert("Sesi Anda tidak valid atau telah berakhir. Silakan verifikasi nomor telepon kembali.");
+          setSubmitting(false);
+          router.push("/book/details");
+          return;
+        }
 
         if (!res.ok) {
           const errorData = await res.json();
@@ -66,7 +83,7 @@ export default function PaymentMethodPage() {
     if (!method) return;
 
     try {
-      const res = await fetch("/api/reservations", {
+      const res = await fetch(`${API_URL}/api/reservations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,6 +98,15 @@ export default function PaymentMethodPage() {
           notes: `Payment Method: ${method.name}`,
         }),
       });
+
+      if (res.status === 401) {
+        localStorage.removeItem("customer_token");
+        dispatch({ type: "SET_USER", payload: null });
+        alert("Sesi Anda tidak valid atau telah berakhir. Silakan verifikasi nomor telepon kembali.");
+        setSubmitting(false);
+        router.push("/book/details");
+        return;
+      }
 
       if (!res.ok) {
         const errorData = await res.json();

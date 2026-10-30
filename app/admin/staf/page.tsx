@@ -52,7 +52,7 @@ export default function StafPage() {
   };
 
   const handleDatePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const d = new Date(e.target.value);
+    const d = new Date(`${e.target.value}T00:00:00`);
     if (!isNaN(d.getTime())) {
       const day = d.getDay();
       d.setDate(d.getDate() - day);
@@ -246,7 +246,7 @@ export default function StafPage() {
   const resetLeaveForm = () => {
     setLeaveFormData({
       user_id: "",
-      leave_date: new Date().toISOString().split("T")[0],
+      leave_date: formatLocalISO(new Date()),
       reason: "",
     });
     setFormError("");

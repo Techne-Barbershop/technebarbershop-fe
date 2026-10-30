@@ -39,7 +39,7 @@ export default function KalenderPage() {
   const [selectedRes, setSelectedRes] = useState<CashierReservation | null>(null);
 
   const startOfWeek = useMemo(() => {
-    const d = new Date(selectedDate);
+    const d = new Date(`${selectedDate}T00:00:00`);
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(diff));
@@ -89,7 +89,7 @@ export default function KalenderPage() {
   }, [reservations, staffData]);
 
   const changeDate = (days: number) => {
-    const d = new Date(selectedDate);
+    const d = new Date(`${selectedDate}T00:00:00`);
     d.setDate(d.getDate() + days);
     setSelectedDate(toISODate(d));
   };
@@ -135,7 +135,7 @@ export default function KalenderPage() {
               <div className="sticky top-0 z-30 flex border-b border-gray-200 bg-white shadow-sm">
                 <div className="sticky left-0 z-40 w-14 shrink-0 bg-white border-r border-gray-100" />
                 {(calendarMode === "week" ? weekDates : [selectedDate]).map((colDate) => {
-                  const d = new Date(colDate);
+                  const d = new Date(`${colDate}T00:00:00`);
                   const isToday = colDate === toISODate(new Date());
                   return (
                     <div key={colDate} className="flex flex-1 flex-col border-l border-gray-200">

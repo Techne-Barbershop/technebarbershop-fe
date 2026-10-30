@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBooking } from "@/context/BookingContext";
+import { API_URL } from "@/lib/api";
 import { Icon } from "@/components/icons";
 
 export default function PaymentTimer() {
@@ -15,24 +16,36 @@ export default function PaymentTimer() {
 
     const target = new Date(state.expiresAt).getTime();
 
-    const updateTimer = () => {
+    let expiredHandled = false;
+    const interval = setInterval(() => {
       const now = new Date().getTime();
       const diff = Math.floor((target - now) / 1000);
       
       if (diff <= 0) {
+        if (expiredHandled) return;
+        expiredHandled = true;
+        clearInterval(interval);
         setTimeLeft(0);
-        alert("Waktu pembayaran telah habis. Reservasi Anda otomatis dibatalkan.");
+        if (state.reservationId) {
+          const token = localStorage.getItem("customer_token");
+          fetch(`${API_URL}/api/reservations/${state.reservationId}/cancel`, {
+            method: "PATCH",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          }).catch(() => {});
+        }
+        alert("Waktu pembayaran telah habis (maksimal 3 menit). Reservasi dan QRIS Anda otomatis dibatalkan.");
         reset();
         router.push("/");
       } else {
         setTimeLeft(diff);
       }
-    };
+    }, 1000);
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    const initialDiff = Math.floor((target - new Date().getTime()) / 1000);
+    setTimeLeft(Math.max(0, initialDiff));
+
     return () => clearInterval(interval);
-  }, [state.expiresAt, reset, router]);
+  }, [state.expiresAt, state.reservationId, reset, router]);
 
   if (!state.expiresAt) return null;
 

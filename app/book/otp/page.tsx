@@ -6,6 +6,7 @@ import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
 import { PrimaryButton } from "@/components/Buttons";
 import { useBooking } from "@/context/BookingContext";
+import { API_URL } from "@/lib/api";
 import { cn } from "@/lib/utils/cn";
 
 export default function OTPVerificationPage() {
@@ -34,7 +35,7 @@ export default function OTPVerificationPage() {
     if (resendCooldown > 0) return;
     try {
       setResendCooldown(60);
-      const res = await fetch("/api/auth/customer/send-otp", {
+      const res = await fetch(`${API_URL}/api/auth/customer/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,7 +60,7 @@ export default function OTPVerificationPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/customer/verify-otp", {
+      const res = await fetch(`${API_URL}/api/auth/customer/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
