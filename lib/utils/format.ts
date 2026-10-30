@@ -46,8 +46,16 @@ export function addMinutes(time: string, minutes: number): string {
   return `${String(nextHours).padStart(2, "0")}:${String(nextMins).padStart(2, "0")}`;
 }
 
+function parseDateInput(dateInput: string | Date): Date {
+  if (typeof dateInput !== "string") return dateInput;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    return new Date(`${dateInput}T00:00:00`);
+  }
+  return new Date(dateInput);
+}
+
 export function formatDateDDMMYYYY(dateInput: string | Date): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const date = parseDateInput(dateInput);
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
@@ -55,7 +63,7 @@ export function formatDateDDMMYYYY(dateInput: string | Date): string {
 }
 
 export function formatDateTimeDDMMYYYY(dateInput: string | Date): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const date = parseDateInput(dateInput);
   const hh = String(date.getHours()).padStart(2, "0");
   const mi = String(date.getMinutes()).padStart(2, "0");
   return `${formatDateDDMMYYYY(date)} ${hh}:${mi}`;

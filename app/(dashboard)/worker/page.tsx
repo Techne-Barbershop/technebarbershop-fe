@@ -51,7 +51,7 @@ export default function WorkerDashboardPage() {
   const [updating, setUpdating] = useState(false);
 
   const startOfWeek = useMemo(() => {
-    const d = new Date(selectedDate);
+    const d = new Date(`${selectedDate}T00:00:00`);
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(diff));
@@ -100,7 +100,7 @@ export default function WorkerDashboardPage() {
   }, [reservations, selectedDate, calendarMode, weekDates]);
 
   const changeDate = (days: number) => {
-    const d = new Date(selectedDate);
+    const d = new Date(`${selectedDate}T00:00:00`);
     d.setDate(d.getDate() + days);
     setSelectedDate(toISODate(d));
   };
@@ -298,7 +298,7 @@ export default function WorkerDashboardPage() {
             {calendarMode === "week" && (
               <div className="flex ml-14 mb-2 border-b border-line pb-2">
                 {weekDates.map((date) => {
-                  const d = new Date(date);
+                  const d = new Date(`${date}T00:00:00`);
                   const isToday = date === toISODate(new Date());
                   return (
                     <div key={date} className="flex-1 text-center">

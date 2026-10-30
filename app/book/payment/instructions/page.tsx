@@ -8,6 +8,7 @@ import PaymentTimer from "@/components/PaymentTimer";
 import { PrimaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
+import { API_URL } from "@/lib/api";
 import { STORE } from "@/lib/constants";
 import { formatDuration, formatPrice, sumDurations, sumPrices } from "@/lib/utils/format";
 import { QRCodeSVG } from "qrcode.react";
@@ -34,7 +35,7 @@ export default function PaymentInstructionsPage() {
     const fetchQR = async () => {
       try {
         const token = localStorage.getItem("customer_token");
-        const res = await fetch(`/api/reservations/${state.reservationId}/payment/qris`, {
+        const res = await fetch(`${API_URL}/api/reservations/${state.reservationId}/payment/qris`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -55,7 +56,7 @@ export default function PaymentInstructionsPage() {
     const interval = setInterval(async () => {
       try {
         const token = localStorage.getItem("customer_token");
-        const res = await fetch(`/api/reservations/${state.reservationId}`, {
+        const res = await fetch(`${API_URL}/api/reservations/${state.reservationId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const meData = await res.json();
@@ -64,6 +65,11 @@ export default function PaymentInstructionsPage() {
         if (meData?.data?.status) {
           if (meData.data.status === "BOOKED" || meData.data.status === "COMPLETED") {
             setStatus("success");
+          } else if (meData.data.status === "CANCELLED") {
+            clearInterval(interval);
+            alert("Waktu pembayaran telah habis atau reservasi telah dibatalkan.");
+            reset();
+            router.push("/");
           }
         }
       } catch (err) {
@@ -101,7 +107,7 @@ export default function PaymentInstructionsPage() {
     setCancelling(true);
     try {
       const token = localStorage.getItem("customer_token");
-      await fetch(`/api/reservations/${state.reservationId}/cancel`, {
+      await fetch(`${API_URL}/api/reservations/${state.reservationId}/cancel`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
       });

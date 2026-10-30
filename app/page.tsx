@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import ImagePlaceholder from "@/components/ImagePlaceholder";
 import Logo from "@/components/Logo";
 import { useBooking } from "@/context/BookingContext";
+import { API_URL } from "@/lib/api";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -19,12 +20,18 @@ export default function LandingPage() {
       setLoading(false);
       return;
     }
-    fetch("/api/auth/customer/me", {
+    fetch(`${API_URL}/api/auth/customer/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          localStorage.removeItem("customer_token");
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
-        if (data.data) {
+        if (data?.data) {
           setCustomer(data.data);
         } else {
           localStorage.removeItem("customer_token");

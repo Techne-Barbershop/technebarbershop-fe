@@ -345,7 +345,7 @@ export default function CashierPage() {
   }, [qrExpiresAt]);
 
   const changeDate = (days: number) => {
-    const d = new Date(selectedDate);
+    const d = new Date(`${selectedDate}T00:00:00`);
     d.setDate(d.getDate() + days);
     setSelectedDate(toISODate(d));
   };

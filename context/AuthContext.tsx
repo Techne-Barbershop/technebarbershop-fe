@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { api, clearToken, getToken, unwrap } from "@/lib/api";
+import { api, clearToken, getToken, setToken, unwrap } from "@/lib/api";
 import type { User } from "@/lib/types/admin";
 
 interface AuthContextValue {
@@ -39,9 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const loggedUser = unwrap(payload);
     
     if (loggedUser.token) {
-      window.localStorage.setItem("techne_token", loggedUser.token);
-      document.cookie = `role=${loggedUser.role}; path=/; max-age=86400`;
-      document.cookie = `token=${loggedUser.token}; path=/; max-age=86400`;
+      setToken(loggedUser.token, loggedUser.role);
     }
     
     setUser(loggedUser);

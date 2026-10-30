@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Icon } from "@/components/icons";
+import { API_URL, getToken } from "@/lib/api";
 import ImageCropperModal from "./ImageCropperModal";
 
 interface ImageUploadProps {
@@ -38,9 +39,8 @@ export default function ImageUpload({ value, onChange, aspectRatio, label = "Upl
       const formData = new FormData();
       formData.append("image", croppedImageBlob, "upload.jpg");
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-      const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-      const res = await fetch(apiUrl + "/api/admin/upload", {
+      const token = getToken() || document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
+      const res = await fetch(API_URL + "/api/admin/upload", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -54,7 +54,7 @@ export default function ImageUpload({ value, onChange, aspectRatio, label = "Upl
 
       const resData = await res.json();
       if (resData.data && resData.data.url) {
-        onChange(apiUrl + resData.data.url);
+        onChange(API_URL + resData.data.url);
       }
     } catch (e) {
       console.error(e);

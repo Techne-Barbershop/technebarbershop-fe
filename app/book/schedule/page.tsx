@@ -7,6 +7,7 @@ import BottomBar from "@/components/BottomBar";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
 import { Icon } from "@/components/icons";
 import { useBooking } from "@/context/BookingContext";
+import { API_URL } from "@/lib/api";
 import {
   formatDateID,
   getMonthMatrix,
@@ -43,7 +44,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (!artist) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/availability/month?worker_id=${artist.id}&year=${year}&month=${month + 1}`)
+    fetch(`${API_URL}/api/availability/month?worker_id=${artist.id}&year=${year}&month=${month + 1}`)
       .then((res) => res.json())
       .then((data) => {
         setAvailableDates(data.data?.available_dates || []);
@@ -53,7 +54,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (!artist || !selectedDate) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/availability/day?worker_id=${artist.id}&date=${selectedDate}`)
+    fetch(`${API_URL}/api/availability/day?worker_id=${artist.id}&date=${selectedDate}`)
       .then((res) => res.json())
       .then((data) => {
         setSlots(data.data?.slots || []);
@@ -127,7 +128,7 @@ export default function SchedulePage() {
     setChecking(true);
 
     try {
-      const res = await fetch("/api/reservations/check-slot", {
+      const res = await fetch(`${API_URL}/api/reservations/check-slot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -156,7 +157,7 @@ export default function SchedulePage() {
         payload: { date: selectedDate, time: selectedTime },
       });
       
-      if (state.user) {
+      if (state.user && localStorage.getItem("customer_token")) {
         router.push("/book/confirm");
       } else {
         router.push("/book/details");

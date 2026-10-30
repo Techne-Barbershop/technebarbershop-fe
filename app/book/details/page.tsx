@@ -6,6 +6,7 @@ import BackButton from "@/components/BackButton";
 import BottomBar from "@/components/BottomBar";
 import { PrimaryButton } from "@/components/Buttons";
 import { useBooking } from "@/context/BookingContext";
+import { API_URL } from "@/lib/api";
 import { cn } from "@/lib/utils/cn";
 
 interface FormValues {
@@ -54,15 +55,23 @@ export default function UserDetailsPage() {
       return;
     }
 
-    fetch("/api/auth/customer/me", {
+    fetch(`${API_URL}/api/auth/customer/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          localStorage.removeItem("customer_token");
+          dispatch({ type: "SET_USER", payload: null });
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
-        if (data.data) {
+        if (data?.data) {
           setSessionCustomer(data.data);
         } else {
           localStorage.removeItem("customer_token");
+          dispatch({ type: "SET_USER", payload: null });
         }
       })
       .catch(() => {})
@@ -89,6 +98,7 @@ export default function UserDetailsPage() {
 
   const handleSwitchAccount = () => {
     localStorage.removeItem("customer_token");
+    dispatch({ type: "SET_USER", payload: null });
     setSessionCustomer(null);
   };
 
@@ -100,7 +110,7 @@ export default function UserDetailsPage() {
     
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/customer/send-otp", {
+      const res = await fetch(`${API_URL}/api/auth/customer/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

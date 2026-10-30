@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 const TOKEN_KEY = "techne_token";
 
@@ -7,14 +7,20 @@ export function getToken(): string | null {
   return window.localStorage.getItem(TOKEN_KEY);
 }
 
-export function setToken(token: string) {
+export function setToken(token: string, role?: string) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(TOKEN_KEY, token);
+  document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
+  if (role) {
+    document.cookie = `role=${role}; path=/; max-age=86400; SameSite=Lax`;
+  }
 }
 
 export function clearToken() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(TOKEN_KEY);
+  document.cookie = "role=; path=/; max-age=0";
+  document.cookie = "token=; path=/; max-age=0";
 }
 
 export class ApiError extends Error {
@@ -69,9 +75,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   if (!res.ok) {
     if (res.status === 401 && typeof window !== "undefined") {
       clearToken();
-      document.cookie = "role=; path=/; max-age=0";
-      document.cookie = "token=; path=/; max-age=0";
-      window.location.href = "/login";
+      if (path !== "/api/login" && window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
 
     const message =
