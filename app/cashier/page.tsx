@@ -204,7 +204,7 @@ export default function CashierPage() {
     setEditLoading(true);
     try {
       await (await import("@/lib/api")).api(`/api/cashier/reservations/${editingSchedule.reservation_id}/schedule`, {
-        method: "PATCH",
+        method: "PUT",
         body: {
           start_time: editStartTime,
           end_time: editEndTime,
@@ -467,7 +467,7 @@ export default function CashierPage() {
                     </div>
                   )}
                   {workerColumns.map((worker) => {
-                    const blocks = reservations.filter((r) => r.capster_id === worker.id);
+                    const blocks = reservations.filter((r) => r.capster_id === worker.id && r.reservation_status !== "CANCELLED");
                     return (
                       <div key={worker.id} className="relative flex-1 border-l border-gray-200" style={{ height: (HOUR_COUNT - 1) * HOUR_HEIGHT }}>
                         {Array.from({ length: HOUR_COUNT }).map((_, i) => (
@@ -529,7 +529,6 @@ export default function CashierPage() {
           <div className="mt-3 flex items-center gap-4 px-5 text-[11px] font-medium text-gray-500">
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-black" /> Lunas</span>
             <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-black bg-gray-100" /> Belum Bayar</span>
-            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-white opacity-60" /> Canceled</span>
           </div>
         </div>
       )}

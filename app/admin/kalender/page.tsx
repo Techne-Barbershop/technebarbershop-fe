@@ -185,7 +185,7 @@ export default function KalenderPage() {
                       {/* Capster Columns for the Day */}
                       <div className="flex flex-1 relative" style={{ height: (HOUR_COUNT - 1) * HOUR_HEIGHT }}>
                         {workerColumns.map((worker) => {
-                          const blocks = reservations.filter((r) => r.capster_id === worker.id && r.booking_date === colDate);
+                          const blocks = reservations.filter((r) => r.capster_id === worker.id && r.booking_date === colDate && r.reservation_status !== "CANCELLED");
                           return (
                             <div key={worker.id} className="relative flex-1 border-r border-gray-100 last:border-0">
                               {blocks.map((res) => {
@@ -224,7 +224,6 @@ export default function KalenderPage() {
             <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm border border-black-200 bg-blue-50" /> Booked</span>
             <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm border border-black-200 bg-green-50" /> Walk In</span>
             <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-black" /> Selesai</span>
-            <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-white opacity-60" /> Canceled</span>
           </div>
         </div>
       )}
