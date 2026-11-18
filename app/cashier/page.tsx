@@ -72,6 +72,29 @@ export default function CashierPage() {
   }, []);
 
   const [qrRes, setQrRes] = useState<CashierReservation | null>(null);
+  const [shopProducts, setShopProducts] = useState<{ product_id: string; name: string; price: string; current_stock: number }[]>([]);
+  const [checkoutProducts, setCheckoutProducts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { api } = await import("@/lib/api");
+        const r = await api<{ data: { products: { product_id: string; name: string; price: string; current_stock: number }[] } }>("/api/cashier/products");
+        setShopProducts(r.data.products || []);
+      } catch {
+        // product list is optional context for the checkout dialog
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!confirmAction) setCheckoutProducts({});
+  }, [confirmAction]);
+
+  const productLines = () =>
+    Object.entries(checkoutProducts)
+      .filter(([, q]) => q > 0)
+      .map(([product_id, quantity]) => ({ product_id, quantity }));
   const [qrString, setQrString] = useState<string>("");
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
@@ -153,6 +176,7 @@ export default function CashierPage() {
     try {
       await (await import("@/lib/api")).api(`/api/cashier/reservations/${res.reservation_id}/checkout`, {
         method: "POST",
+        body: { products: productLines() },
       });
       setSelectedRes(null);
       refetch();
@@ -310,7 +334,7 @@ export default function CashierPage() {
     try {
       const resp = await (await import("@/lib/api")).api<{ data: { qr_string: string } }>(
         `/api/cashier/reservations/${res.reservation_id}/qris`,
-        { method: "POST" },
+        { method: "POST", body: { products: productLines() } },
       );
       setQrString(resp.data.qr_string);
       setQrRes(res);
@@ -706,6 +730,34 @@ export default function CashierPage() {
               <Icon name={confirmAction.type === "QRIS" ? "qrcode" : confirmAction.type === "CASH" ? "wallet" : "close"} className="h-8 w-8" />
             </div>
             <h2 className="text-lg font-bold text-black">Konfirmasi {confirmAction.type === "CASH" ? "Pembayaran" : confirmAction.type === "QRIS" ? "QRIS" : "Pembatalan"}</h2>
+            {confirmAction.type !== "CANCEL" && shopProducts.length > 0 && (
+              <div className="mt-4 max-h-56 space-y-2 overflow-y-auto">
+                <p className="text-xs font-semibold text-gray-500">Tambah Produk (opsional)</p>
+                {shopProducts.map((p) => (
+                  <div key={p.product_id} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-black">{p.name}</div>
+                      <div className="text-xs text-gray-500">Stok: {p.current_stock} · {formatPrice(Number(p.price))}</div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        onClick={() => setCheckoutProducts((prev) => ({ ...prev, [p.product_id]: Math.max(0, (prev[p.product_id] ?? 0) - 1) }))}
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                      >
+                        −
+                      </button>
+                      <span className="w-6 text-center text-sm font-semibold text-black">{checkoutProducts[p.product_id] ?? 0}</span>
+                      <button
+                        onClick={() => setCheckoutProducts((prev) => ({ ...prev, [p.product_id]: Math.min(p.current_stock, (prev[p.product_id] ?? 0) + 1) }))}
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <p className="text-sm text-gray-500">
               {confirmAction.type === "CASH" && (
                 <>Apakah Anda yakin ingin memproses pembayaran CASH untuk <strong>{confirmAction.res.customer_name}</strong>?</>

@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@/components/icons";
 import Modal from "@/components/admin/Modal";
+import ServiceForm, { type ServiceFormValues } from "@/components/ServiceForm";
+import { api } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { Category, Service, CategoriesResponse } from "@/lib/types/admin";
 import { formatDuration, formatPrice } from "@/lib/utils/format";
@@ -17,7 +19,7 @@ export default function CashierLayananPage() {
     data: Category | Service;
   } | null>(null);
 
-  const { data, loading, error } = useApiPath<{ data: CategoriesResponse }>("/api/admin/categories");
+  const { data, loading, error, refetch } = useApiPath<{ data: CategoriesResponse }>("/api/admin/categories");
   const categories = data?.data.categories ?? [];
 
   useEffect(() => {
@@ -40,6 +42,59 @@ export default function CashierLayananPage() {
 
   const closeModal = () => {
     setModalState(null);
+  };
+
+  const [editState, setEditState] = useState<Service | null>(null);
+  const [editForm, setEditForm] = useState<ServiceFormValues>({
+    category_id: "",
+    name: "",
+    duration_minutes: 0,
+    price: "",
+    description: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  const openEdit = (service: Service) => {
+    setEditState(service);
+    setEditForm({
+      category_id: service.category_id,
+      name: service.name,
+      duration_minutes: service.duration_minutes,
+      price: service.price,
+      description: service.description,
+    });
+    setEditError("");
+    setOpenDropdown(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editState) return;
+    if (!editForm.name.trim()) {
+      setEditError("Nama layanan wajib diisi");
+      return;
+    }
+    setSavingEdit(true);
+    setEditError("");
+    try {
+      await api(`/api/admin/services/${editState.service_id}`, {
+        method: "PUT",
+        body: {
+          category_id: editForm.category_id,
+          name: editForm.name,
+          duration_minutes: editForm.duration_minutes,
+          price: editForm.price,
+          description: editForm.description,
+          image_url: editState.image_url,
+        },
+      });
+      setEditState(null);
+      refetch();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Gagal menyimpan layanan");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
@@ -146,6 +201,16 @@ export default function CashierLayananPage() {
                         <div className="text-xs text-gray-500">{formatDuration(service.duration_minutes)}</div>
                       </div>
                       <div className="text-sm font-semibold text-black">{formatPrice(Number(service.price))}</div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(service);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-black"
+                          title="Ubah layanan"
+                        >
+                          <Icon name="edit" className="h-4 w-4" />
+                        </button>
 
                       <div className="relative ml-2">
                         <button
@@ -256,6 +321,32 @@ export default function CashierLayananPage() {
           </div>
         )}
       </Modal>
+      {editState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6">
+            <h2 className="mb-4 text-lg font-bold text-black">Ubah Layanan</h2>
+            <ServiceForm categories={categories} value={editForm} onChange={setEditForm} />
+            {editError && (
+              <p className="mt-3 rounded-lg bg-red-50 px-4 py-2 text-xs font-medium text-red-500">{editError}</p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setEditState(null)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600"
+              >
+                Batal
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={savingEdit}
+                className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {savingEdit ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
