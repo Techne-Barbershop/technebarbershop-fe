@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
+import NumberInput from "@/components/ui/NumberInput";
 import { api } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { CategoriesResponse } from "@/lib/types/admin";
@@ -104,12 +105,12 @@ export default function LayananBaruPage() {
                 <label htmlFor="duration" className="text-sm font-semibold text-black">
                   Durasi
                 </label>
-                <input
+                <NumberInput
                   id="duration"
-                  type="number"
                   min={1}
+                  required
                   value={form.duration_minutes}
-                  onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })}
+                  onChange={(v) => setForm({ ...form, duration_minutes: v ?? 0 })}
                   placeholder="Menit, contoh: 45"
                   className={INPUT_CLASS}
                 />
@@ -118,12 +119,12 @@ export default function LayananBaruPage() {
                 <label htmlFor="price" className="text-sm font-semibold text-black">
                   Harga
                 </label>
-                <input
+                <NumberInput
                   id="price"
-                  type="number"
                   min={0}
+                  allowDecimal
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  onChange={(v) => setForm({ ...form, price: v === null ? "" : String(v) })}
                   placeholder="Rp"
                   className={INPUT_CLASS}
                 />

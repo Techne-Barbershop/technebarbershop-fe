@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@/components/icons";
 import Modal from "@/components/admin/Modal";
+import NumberInput from "@/components/ui/NumberInput";
 import { api } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { Category, Service, CategoriesResponse } from "@/lib/types/admin";
@@ -371,11 +372,11 @@ export default function LayananPage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-black">Harga (Rp)</label>
-              <input type="number" min={1} required value={svcForm.price} onChange={(e) => setSvcForm({ ...svcForm, price: String(e.target.value) })} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-black outline-none transition focus:border-black" />
+              <NumberInput min={1} required allowDecimal value={svcForm.price} onChange={(v) => setSvcForm({ ...svcForm, price: v === null ? "" : String(v) })} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-black">Durasi (Menit)</label>
-              <input type="number" min={1} required value={svcForm.duration_minutes} onChange={(e) => setSvcForm({ ...svcForm, duration_minutes: Number(e.target.value) })} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-black outline-none transition focus:border-black" />
+              <NumberInput min={1} required value={svcForm.duration_minutes} onChange={(v) => setSvcForm({ ...svcForm, duration_minutes: v ?? 0 })} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-black">Deskripsi Singkat</label>

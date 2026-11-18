@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@/components/icons";
 import Modal from "@/components/admin/Modal";
+import NumberInput from "@/components/ui/NumberInput";
 import { api } from "@/lib/api";
 import { useApiPath } from "@/lib/useApi";
 import type { Product, ProductsResponse } from "@/lib/types/admin";
@@ -250,11 +251,11 @@ export default function InventoriPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="edit-price" className="text-sm font-semibold text-black">Harga Produk</label>
-                  <input id="edit-price" type="number" min={0} required value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-black outline-none transition focus:border-black" />
+                  <NumberInput id="edit-price" min={0} required allowDecimal value={editForm.price} onChange={(v) => setEditForm({ ...editForm, price: v === null ? "" : String(v) })} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="edit-qty" className="text-sm font-semibold text-black">Kuantitas</label>
-                  <input id="edit-qty" type="number" min={0} required value={editForm.current_stock} onChange={(e) => setEditForm({ ...editForm, current_stock: Number(e.target.value) })} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-black outline-none transition focus:border-black" />
+                  <NumberInput id="edit-qty" min={0} required value={editForm.current_stock} onChange={(v) => setEditForm({ ...editForm, current_stock: v ?? 0 })} />
                 </div>
                 {formError && <p className="text-xs font-medium text-red-500">{formError}</p>}
                 <div className="mt-2 flex justify-end gap-3 pt-4 border-t border-gray-100">
