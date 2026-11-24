@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/utils/format";
+import NumberInput from "@/components/ui/NumberInput";
 
 interface Product { product_id: string; name: string; current_stock: number; price: string; image_url: string }
 
@@ -16,11 +17,36 @@ export default function ProductPickPage() {
   const [qty, setQty] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const [editingStock, setEditingStock] = useState<string | null>(null);
+  const [stockValue, setStockValue] = useState<number | null>(null);
+  const [savingStock, setSavingStock] = useState(false);
+
+  const loadProducts = () =>
     api<{ data: { products: Product[] } }>("/api/cashier/products")
       .then((r) => { setProducts(r.data.products || []); setLoading(false); })
       .catch(() => setLoading(false));
+
+  useEffect(() => {
+    loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const saveStock = async (productId: string) => {
+    if (stockValue === null) return;
+    setSavingStock(true);
+    try {
+      await api(`/api/admin/products/${productId}/stock`, {
+        method: "PATCH",
+        body: { current_stock: stockValue },
+      });
+      await loadProducts();
+      setEditingStock(null);
+    } catch {
+      // keep the editor open so the cashier can retry
+    } finally {
+      setSavingStock(false);
+    }
+  };
 
   const selected = products.filter((p) => (qty[p.product_id] ?? 0) > 0);
   const totalQty = selected.reduce((s, p) => s + (qty[p.product_id] ?? 0), 0);
@@ -64,7 +90,26 @@ export default function ProductPickPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-black truncate">{p.name}</div>
-                  <div className="text-xs text-gray-500">Stok: {p.current_stock} · {formatPrice(Number(p.price))}</div>
+                  {editingStock === p.product_id ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Stok:</span>
+                      <NumberInput value={stockValue} onChange={setStockValue} min={0} className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-xs text-black outline-none focus:border-black" />
+                      <button onClick={() => saveStock(p.product_id)} disabled={savingStock || stockValue === null} className="rounded-lg bg-black px-2 py-1 text-xs font-semibold text-white disabled:opacity-40">
+                        {savingStock ? "..." : "Simpan"}
+                      </button>
+                      <button onClick={() => setEditingStock(null)} className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600">
+                        Batal
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setEditingStock(p.product_id); setStockValue(p.current_stock); }}
+                      className="text-xs text-gray-500 underline decoration-dotted underline-offset-2 hover:text-black"
+                      title="Ubah stok"
+                    >
+                      Stok: {p.current_stock} · {formatPrice(Number(p.price))}
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => setQty((prev) => ({ ...prev, [p.product_id]: Math.max(0, (prev[p.product_id] ?? 0) - 1) }))} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 active:scale-95">

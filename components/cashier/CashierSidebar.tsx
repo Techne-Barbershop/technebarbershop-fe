@@ -6,8 +6,13 @@ import { Icon, type IconName } from "@/components/icons";
 import { cn } from "@/lib/utils/cn";
 
 const NAV_ITEMS: { href: string; label: string; icon: IconName }[] = [
+  { href: "/cashier/beranda", label: "Beranda", icon: "home" },
   { href: "/cashier", label: "Daftar Reservasi", icon: "calendar" },
   { href: "/cashier/order", label: "Tambah Order", icon: "plus" },
+  { href: "/cashier/pelanggan", label: "Pelanggan", icon: "users" },
+  { href: "/cashier/staf", label: "Staf", icon: "user" },
+  { href: "/cashier/layanan", label: "Layanan", icon: "scissors" },
+  { href: "/cashier/inventori", label: "Inventori", icon: "box" },
 ];
 
 export default function CashierSidebar({
@@ -22,7 +27,7 @@ export default function CashierSidebar({
     if (href === "/cashier") {
       return pathname === href;
     }
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
 
   return (

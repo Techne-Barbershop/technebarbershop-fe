@@ -21,8 +21,18 @@ export default function CashierHeader({
   
   // Find matching title, allowing for subpaths
   let title = "Kasir";
-  if (pathname.startsWith("/cashier/order")) {
+  if (pathname.startsWith("/cashier/beranda")) {
+    title = "Beranda";
+  } else if (pathname.startsWith("/cashier/order")) {
     title = "Tambah Order";
+  } else if (pathname.startsWith("/cashier/pelanggan")) {
+    title = "Pelanggan";
+  } else if (pathname.startsWith("/cashier/staf")) {
+    title = "Staf";
+  } else if (pathname.startsWith("/cashier/layanan")) {
+    title = "Layanan";
+  } else if (pathname.startsWith("/cashier/inventori")) {
+    title = "Inventori";
   } else if (pathname === "/cashier") {
     title = "Daftar Reservasi";
   }
